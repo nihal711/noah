@@ -180,4 +180,34 @@ class RequestSummary(BaseModel):
     updated_at: Optional[datetime] = None
     
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class PayslipBase(BaseModel):
+    month: int
+    year: int
+    basic_salary: float
+    allowances: float
+    deductions: float
+    net_salary: float
+
+class PayslipCreate(PayslipBase):
+    pass
+
+class PayslipUpdate(BaseModel):
+    basic_salary: Optional[float] = None
+    allowances: Optional[float] = None
+    deductions: Optional[float] = None
+    net_salary: Optional[float] = None
+
+class PayslipResponse(PayslipBase):
+    payslip_id: int
+    user_id: int
+    status: str
+    approved_by: Optional[int] = None
+    approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True 

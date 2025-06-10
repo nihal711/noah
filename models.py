@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -101,3 +101,33 @@ class VisaLetterRequest(Base):
     # Relationships
     user = relationship("User", back_populates="visa_letter_requests")
     attachments = relationship("Attachment", foreign_keys=[Attachment.visa_letter_request_id]) 
+
+class Payslip(Base):
+    __tablename__ = "payslips"
+    
+    payslip_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    month = Column(Integer, nullable=False)  # 1-12
+    year = Column(Integer, nullable=False)
+    basic_salary = Column(Float, nullable=False)
+    allowances = Column(Float, default=0.0)
+    deductions = Column(Float, default=0.0)
+    net_salary = Column(Float, nullable=False)
+    status = Column(String, default="pending")  # pending, approved, rejected
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'month', 'year', name='uix_user_month_year'),
+    )
+    
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="payslips")
+    approver = relationship("User", foreign_keys=[approved_by])
+
+
+User.payslips = relationship("Payslip", back_populates="user", foreign_keys=[Payslip.user_id]) 
