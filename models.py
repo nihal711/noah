@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -18,10 +18,13 @@ class User(Base):
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
+    # Essential relationships
     leave_requests = relationship("LeaveRequest", back_populates="user")
     bank_letter_requests = relationship("BankLetterRequest", back_populates="user")
     visa_letter_requests = relationship("VisaLetterRequest", back_populates="user")
+    payslips = relationship("Payslip", back_populates="user", foreign_keys="Payslip.user_id")
+    salary_structure = relationship("SalaryStructure", back_populates="user", foreign_keys="SalaryStructure.user_id", uselist=False)
+    benefit_enrollments = relationship("BenefitEnrollment", back_populates="user", foreign_keys="BenefitEnrollment.user_id")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -120,14 +123,55 @@ class Payslip(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-
     __table_args__ = (
         UniqueConstraint('user_id', 'month', 'year', name='uix_user_month_year'),
     )
     
-
+    # Essential relationships for payslip functionality
     user = relationship("User", foreign_keys=[user_id], back_populates="payslips")
     approver = relationship("User", foreign_keys=[approved_by])
-
-
 User.payslips = relationship("Payslip", back_populates="user", foreign_keys=[Payslip.user_id]) 
+
+class SalaryStructure(Base):
+    __tablename__ = "salary_structures"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    basic_salary = Column(Float, nullable=False)
+    allowances = Column(JSON, nullable=False, default={})
+    deductions = Column(JSON, nullable=False, default={})
+    effective_date = Column(DateTime(timezone=True), nullable=False)
+    
+    # Essential relationship
+    user = relationship("User", foreign_keys=[user_id], back_populates="salary_structure")
+
+class Benefit(Base):
+    __tablename__ = "benefits"
+    
+    benefit_id = Column(Integer, primary_key=True, index=True)
+    benefit_name = Column(String, nullable=False)
+    benefit_description = Column(Text, nullable=False)
+    benefit_type = Column(String, nullable=False)  # health_insurance, life_insurance, etc.
+    max_amount = Column(Float, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class BenefitEnrollment(Base):
+    __tablename__ = "benefit_enrollments"
+    
+    enrollment_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    benefit_id = Column(Integer, ForeignKey("benefits.benefit_id"), nullable=False)
+    enrollment_status = Column(String, default="pending")  # pending, approved, rejected
+    enrollment_date = Column(DateTime(timezone=True), nullable=False)
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Essential relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="benefit_enrollments")
+    benefit = relationship("Benefit")
+    approver = relationship("User", foreign_keys=[approved_by]) 

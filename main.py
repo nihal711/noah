@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db
 import models
-from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips
+from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits
 from sqlalchemy import text
 
 # Create database tables
@@ -77,6 +77,7 @@ app.include_router(bank_letter.router)
 app.include_router(visa_letter.router)
 app.include_router(requests.router)
 app.include_router(payslips.router)
+app.include_router(salary_benefits.router)
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -113,4 +114,4 @@ async def health_check(db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8282) 
+    uvicorn.run(app, host="0.0.0.0", port=8181) 

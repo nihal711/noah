@@ -210,4 +210,68 @@ class PayslipResponse(PayslipBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True 
+        orm_mode = True
+
+# Salary Structure Schemas
+class SalaryStructureBase(BaseModel):
+    basic_salary: float
+    allowances: dict
+    deductions: dict
+    effective_date: datetime
+
+class SalaryStructureCreate(SalaryStructureBase):
+    pass
+
+class SalaryStructureUpdate(SalaryStructureBase):
+    pass
+
+class SalaryStructureResponse(SalaryStructureBase):
+    id: int
+    user_id: int
+    
+    class Config:
+        from_attributes = True
+
+# Benefit Schemas
+class BenefitBase(BaseModel):
+    benefit_name: str
+    benefit_description: str
+    benefit_type: str
+    max_amount: float
+    is_active: bool = True
+
+class BenefitCreate(BenefitBase):
+    pass
+
+class BenefitResponse(BenefitBase):
+    benefit_id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+# Benefit Enrollment Schemas
+class BenefitEnrollmentBase(BaseModel):
+    benefit_id: int
+    enrollment_date: datetime
+
+class BenefitEnrollmentCreate(BenefitEnrollmentBase):
+    pass
+
+class BenefitEnrollmentResponse(BenefitEnrollmentBase):
+    enrollment_id: int
+    user_id: int
+    enrollment_status: str
+    approved_by: Optional[int]
+    approved_at: Optional[datetime]
+    rejection_reason: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    benefit: BenefitResponse
+    
+    class Config:
+        from_attributes = True
+
+class BenefitEnrollmentUpdate(BaseModel):
+    rejection_reason: Optional[str] = None 
