@@ -11,7 +11,7 @@ from auth import get_current_user
 
 router = APIRouter(
     prefix="/payslips",
-    tags=["payslips"]
+    tags=["Payslips Management"]
 )
 
 @router.get("/getpayslipperiod")

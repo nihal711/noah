@@ -392,4 +392,70 @@ class PerformanceGoal(PerformanceGoalBase):
     user_id: int
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+# LMS Schemas
+class CourseBase(BaseModel):
+    title: str
+    description: str
+    category: str
+    instructor: str
+    duration: int
+
+class CourseCreate(CourseBase):
+    pass
+
+class CourseResponse(CourseBase):
+    course_id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class EnrollmentBase(BaseModel):
+    course_id: int
+
+class EnrollmentCreate(EnrollmentBase):
+    pass
+
+class EnrollmentResponse(EnrollmentBase):
+    enrollment_id: int
+    user_id: int
+    enrolled_at: datetime
+    status: str
+    progress: int
+
+    class Config:
+        from_attributes = True
+
+class CompletionBase(BaseModel):
+    course_id: int
+
+class CompletionCreate(CompletionBase):
+    pass
+
+class CompletionResponse(CompletionBase):
+    completion_id: int
+    user_id: int
+    completed_at: datetime
+    certificate_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+# Filter Schemas
+class CourseFilter(BaseModel):
+    category: Optional[str] = None
+    instructor: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class EnrollmentFilter(BaseModel):
+    year: Optional[int] = None
+    status: Optional[str] = None
+    course_id: Optional[int] = None
+
+class CompletionFilter(BaseModel):
+    year: Optional[int] = None
+    course_id: Optional[int] = None 

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db
 import models
-from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits, pms
+from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits, pms, lms
 from sqlalchemy import text
 
 # Create database tables
@@ -51,6 +51,13 @@ app = FastAPI(
     * Self and manager reviews
     * Performance assessment workflow
     * Goal progress tracking
+
+    ## Learning Management System (LMS)
+    * Create and manage courses
+    * Course enrollment
+    * Track course progress
+    * Course completion tracking
+    * Certificate generation
     
     ## Demo Environment
     This is a demo environment with PostgreSQL database integration.
@@ -85,6 +92,7 @@ app.include_router(requests.router)
 app.include_router(payslips.router)
 app.include_router(salary_benefits.router)
 app.include_router(pms.router)
+app.include_router(lms.router, prefix="/lms", tags=["LMS"])
 
 
 @app.get("/", tags=["Root"])

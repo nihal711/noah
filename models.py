@@ -248,4 +248,48 @@ class PerformanceReview(Base):
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="performance_reviews")
-    goal = relationship("PerformanceGoal", back_populates="reviews") 
+    goal = relationship("PerformanceGoal", back_populates="reviews")
+
+class Course(Base):
+    __tablename__ = "courses"
+    
+    course_id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    category = Column(String, nullable=False)
+    instructor = Column(String, nullable=False)
+    duration = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    enrollments = relationship("Enrollment", back_populates="course")
+    completions = relationship("Completion", back_populates="course")
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    
+    enrollment_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.course_id"), nullable=False)
+    enrolled_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String, nullable=False)  # 'active', 'completed', 'dropped'
+    progress = Column(Integer, default=0)
+
+    # Relationships
+    user = relationship("User")
+    course = relationship("Course", back_populates="enrollments")
+
+class Completion(Base):
+    __tablename__ = "completions"
+    
+    completion_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.course_id"), nullable=False)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    certificate_url = Column(String)
+
+    # Relationships
+    user = relationship("User")
+    course = relationship("Course", back_populates="completions") 
