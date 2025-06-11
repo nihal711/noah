@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -274,4 +274,122 @@ class BenefitEnrollmentResponse(BenefitEnrollmentBase):
         from_attributes = True
 
 class BenefitEnrollmentUpdate(BaseModel):
-    rejection_reason: Optional[str] = None 
+    rejection_reason: Optional[str] = None
+
+# Goal Schemas
+class GoalBase(BaseModel):
+    title: str
+    description: str
+    target_date: datetime
+    year: int
+    progress:int
+    goal_for: str  # self or subordinate
+    user_id: Optional[int] = None
+
+class GoalCreate(GoalBase):
+    pass
+
+class GoalUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    target_date: Optional[datetime] = None
+
+class GoalResponse(GoalBase):
+    goal_id: int
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+class UserGoalsResponse(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    goals: List[GoalResponse]
+
+class ReviewBase(BaseModel):
+    user_id: int
+    goal_id: int
+    overall_rating: int
+    comments: str
+
+class ReviewCreate(BaseModel):
+    goal_id: int = Field(..., description="ID of the goal being reviewed")
+    overall_rating: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="Overall rating for the goal (1-5)"
+    )
+    comments: str = Field(..., description="Review comments")
+
+class ReviewResponse(BaseModel):
+    review_id: int
+    user_id: int
+    goal_id: int
+    year: int
+    overall_rating: int = Field(..., ge=1, le=5)
+    comments: str
+    status: str
+    manager_rating: Optional[int] = Field(None, ge=1, le=5)
+    manager_comments: Optional[str] = None
+    goal: GoalResponse
+
+    class Config:
+        from_attributes = True
+
+class ManagerReview(BaseModel):
+    rating: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="Manager's rating for the review (1-5)"
+    )
+    comments: str = Field(..., description="Manager's review comments")
+
+class ReviewRejection(BaseModel):
+    comments: str = Field(..., description="Reason for rejecting the review")
+
+class ReviewStatusResponse(BaseModel):
+    goal_title: str
+    review_status: str
+    overall_rating: int = Field(..., ge=1, le=5)
+    manager_rating: Optional[int] = Field(None, ge=1, le=5)
+    manager_comments: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class PerformanceGoalBase(BaseModel):
+    title: str = Field(..., description="Title of the performance goal")
+    description: str = Field(..., description="Detailed description of the goal")
+    target_date: datetime = Field(..., description="Target completion date for the goal")
+    year: int = Field(..., description="Year for which the goal is set")
+    goal_for: str = Field(..., description="Type of goal: 'self' or 'subordinate'")
+    progress: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Progress percentage of the goal (0-100)"
+    )
+
+class PerformanceGoalCreate(PerformanceGoalBase):
+    user_id: Optional[int] = Field(None, description="ID of the subordinate user (required only for subordinate goals)")
+
+class PerformanceGoalUpdate(BaseModel):
+    title: Optional[str] = Field(None, description="Title of the performance goal")
+    description: Optional[str] = Field(None, description="Detailed description of the goal")
+    target_date: Optional[datetime] = Field(None, description="Target completion date for the goal")
+    progress: Optional[int] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Progress percentage of the goal (0-100)"
+    )
+
+class PerformanceGoal(PerformanceGoalBase):
+    goal_id: int
+    user_id: int
+
+    class Config:
+        from_attributes = True 

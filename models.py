@@ -25,6 +25,9 @@ class User(Base):
     payslips = relationship("Payslip", back_populates="user", foreign_keys="Payslip.user_id")
     salary_structure = relationship("SalaryStructure", back_populates="user", foreign_keys="SalaryStructure.user_id", uselist=False)
     benefit_enrollments = relationship("BenefitEnrollment", back_populates="user", foreign_keys="BenefitEnrollment.user_id")
+    goals = relationship("Goal", back_populates="user")
+    performance_goals = relationship("PerformanceGoal", back_populates="user", foreign_keys="PerformanceGoal.user_id")
+    performance_reviews = relationship("PerformanceReview", back_populates="user", foreign_keys="PerformanceReview.user_id")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -175,3 +178,74 @@ class BenefitEnrollment(Base):
     user = relationship("User", foreign_keys=[user_id], back_populates="benefit_enrollments")
     benefit = relationship("Benefit")
     approver = relationship("User", foreign_keys=[approved_by]) 
+
+class Goal(Base):
+    __tablename__ = "goals"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String, default="in_progress")  # not_started, in_progress, completed, cancelled
+    progress = Column(Integer, default=0)  # 0-100 percentage
+    category = Column(String, nullable=False)  # personal, team, organizational
+    priority = Column(String, default="medium")  # low, medium, high
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="goals")
+    reviews = relationship("Review", back_populates="goal")
+
+class Review(Base):
+    __tablename__ = "reviews"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5 scale
+    feedback = Column(Text, nullable=False)
+    review_date = Column(DateTime(timezone=True), nullable=False)
+    review_type = Column(String, nullable=False)  # mid_year, end_year, quarterly
+    status = Column(String, default="pending")  # pending, submitted, acknowledged
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    goal = relationship("Goal", back_populates="reviews")
+    reviewer = relationship("User", foreign_keys=[reviewer_id]) 
+
+class PerformanceGoal(Base):
+    __tablename__ = "performance_goals"
+    
+    goal_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    target_date = Column(DateTime(timezone=True), nullable=False)
+    year = Column(Integer, nullable=False)
+    goal_for = Column(String, nullable=False)  # self or subordinate
+    progress = Column(Integer, default=0)  # 0-100 percentage
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="performance_goals")
+    reviews = relationship("PerformanceReview", back_populates="goal")
+
+class PerformanceReview(Base):
+    __tablename__ = "performance_reviews"
+    
+    review_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    goal_id = Column(Integer, ForeignKey("performance_goals.goal_id"), nullable=False)
+    year = Column(Integer, nullable=False)
+    overall_rating = Column(Integer, nullable=False)
+    comments = Column(Text, nullable=False)
+    status = Column(String, default="pending")  # pending, approved, rejected
+    manager_rating = Column(Integer, nullable=True)
+    manager_comments = Column(Text, nullable=True)
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="performance_reviews")
+    goal = relationship("PerformanceGoal", back_populates="reviews") 

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db
 import models
-from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits
+from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits, pms
 from sqlalchemy import text
 
 # Create database tables
@@ -45,6 +45,12 @@ app = FastAPI(
     * View all requests across different types
     * Unified request tracking
     * Pending requests dashboard
+
+    ## Performance Management
+    * Create and track performance goals
+    * Self and manager reviews
+    * Performance assessment workflow
+    * Goal progress tracking
     
     ## Demo Environment
     This is a demo environment with PostgreSQL database integration.
@@ -78,6 +84,8 @@ app.include_router(visa_letter.router)
 app.include_router(requests.router)
 app.include_router(payslips.router)
 app.include_router(salary_benefits.router)
+app.include_router(pms.router)
+
 
 @app.get("/", tags=["Root"])
 async def root():
