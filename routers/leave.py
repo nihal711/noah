@@ -5,8 +5,60 @@ from database import get_db
 from models import User, LeaveRequest, LeaveBalance
 from schemas import LeaveRequestCreate, LeaveRequestResponse, LeaveRequestUpdate, LeaveBalanceResponse, MessageResponse
 from auth import get_current_active_user
+from utils import verify_manager_permission
+from datetime import datetime
 
 router = APIRouter(prefix="/leave", tags=["Leave Management"])
+
+def check_leave_balance(db: Session, user_id: int, leave_type: str, days_requested: float) -> None:
+    """
+    Check if user has sufficient leave balance.
+    Raises HTTPException if balance is insufficient.
+    """
+    current_year = datetime.now().year
+    leave_balance = db.query(LeaveBalance).filter(
+        LeaveBalance.user_id == user_id,
+        LeaveBalance.leave_type == leave_type,
+        LeaveBalance.year == current_year
+    ).first()
+    
+    if not leave_balance:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No leave balance found for {leave_type} leave in {current_year}"
+        )
+    
+    if leave_balance.remaining_days < days_requested:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient {leave_type} leave balance. You have {leave_balance.remaining_days} days remaining, but requested {days_requested} days"
+        )
+
+def update_leave_balance(db: Session, user_id: int, leave_type: str, days_requested: float) -> None:
+    """
+    Update leave balance by deducting the requested days.
+    """
+    current_year = datetime.now().year
+    leave_balance = db.query(LeaveBalance).filter(
+        LeaveBalance.user_id == user_id,
+        LeaveBalance.leave_type == leave_type,
+        LeaveBalance.year == current_year
+    ).first()
+    
+    if not leave_balance:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No leave balance found for {leave_type} leave in {current_year}"
+        )
+    
+    leave_balance.used_days += days_requested
+    leave_balance.remaining_days -= days_requested
+    
+    if leave_balance.remaining_days < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot approve leave request. It would result in negative balance for {leave_type} leave"
+        )
 
 # Leave Request Endpoints
 @router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request")
@@ -15,6 +67,9 @@ async def apply_leave(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
+    # Check if user has sufficient balance
+    check_leave_balance(db, current_user.id, leave_request.leave_type, leave_request.days_requested)
+    
     db_leave_request = LeaveRequest(
         user_id=current_user.id,
         leave_type=leave_request.leave_type,
@@ -76,6 +131,83 @@ async def update_leave_request(
     
     leave_request.status = update_data.status
     leave_request.manager_comments = update_data.manager_comments
+    
+    db.commit()
+    db.refresh(leave_request)
+    return leave_request
+
+@router.put("/requests/{request_id}/approve", response_model=LeaveRequestResponse, summary="Approve Leave Request", description="Approve a leave request (manager function)")
+async def approve_leave_request(
+    request_id: int,
+    manager_comments: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == request_id).first()
+    if leave_request is None:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, leave_request.user_id)
+    
+    # Check if request is already processed
+    if leave_request.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This leave request has already been processed"
+        )
+    
+    try:
+        # Double check leave balance before approving
+        check_leave_balance(db, leave_request.user_id, leave_request.leave_type, leave_request.days_requested)
+        
+        # Update leave request status
+        leave_request.status = "approved"
+        leave_request.manager_comments = manager_comments
+        
+        # Update leave balance
+        update_leave_balance(db, leave_request.user_id, leave_request.leave_type, leave_request.days_requested)
+        
+        db.commit()
+        db.refresh(leave_request)
+        return leave_request
+        
+    except HTTPException as e:
+        if e.status_code == status.HTTP_400_BAD_REQUEST and "Insufficient" in str(e.detail):
+            # Auto-reject the request with clear reason
+            leave_request.status = "rejected"
+            leave_request.manager_comments = f"Request automatically rejected: {str(e.detail)}"
+            db.commit()
+            db.refresh(leave_request)
+            return leave_request
+        else:
+            # Re-raise other HTTP exceptions
+            raise
+
+@router.put("/requests/{request_id}/reject", response_model=LeaveRequestResponse, summary="Reject Leave Request", description="Reject a leave request (manager function)")
+async def reject_leave_request(
+    request_id: int,
+    manager_comments: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == request_id).first()
+    if leave_request is None:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, leave_request.user_id)
+    
+    # Check if request is already processed
+    if leave_request.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This leave request has already been processed"
+        )
+    
+    # Update leave request
+    leave_request.status = "rejected"
+    leave_request.manager_comments = manager_comments
     
     db.commit()
     db.refresh(leave_request)
