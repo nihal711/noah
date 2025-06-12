@@ -8,6 +8,7 @@ from database import get_db
 from models import Payslip, User
 from schemas import PayslipCreate, PayslipResponse, PayslipUpdate
 from auth import get_current_user
+from utils import verify_manager_permission
 
 router = APIRouter(
     prefix="/payslips",
@@ -111,8 +112,9 @@ async def get_payslip_details(
         raise HTTPException(status_code=404, detail="Payslip not found")
     
     # Check if user has permission to view this payslip
-    if payslip.user_id != current_user.id and current_user.manager_id is not None:
-        raise HTTPException(status_code=403, detail="Not authorized to view this payslip")
+    if payslip.user_id != current_user.id:
+        # If not the owner, verify manager permissions
+        verify_manager_permission(db, current_user, payslip.user_id)
     
     return payslip
 

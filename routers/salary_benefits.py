@@ -11,6 +11,7 @@ from schemas import (
 from auth import get_current_active_user
 from datetime import datetime
 import logging
+from utils import verify_manager_permission
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -43,15 +44,8 @@ async def create_salary_structure(
 ):
     logger.info(f"Creating salary structure for user {user_id} by user {current_user.id}")
     
-    # Only managers can create salary structures
-    if not is_manager(db, current_user):
-        logger.warning(f"User {current_user.id} attempted to create salary structure but is not a manager")
-        raise HTTPException(status_code=403, detail="Only managers can create salary structures")
-    
-    # Check if target user is a subordinate
-    if not is_subordinate(db, current_user, user_id):
-        logger.warning(f"User {current_user.id} attempted to create salary structure for non-subordinate {user_id}")
-        raise HTTPException(status_code=403, detail="Can only create salary structure for subordinates")
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, user_id)
     
     # Check if user already has a salary structure
     existing = db.query(SalaryStructure).filter(SalaryStructure.user_id == user_id).first()
@@ -92,15 +86,8 @@ async def get_user_salary_structure(
 ):
     logger.info(f"User {current_user.id} requesting salary structure for user {user_id}")
     
-    # Check if current user is a manager
-    if not is_manager(db, current_user):
-        logger.warning(f"User {current_user.id} attempted to view salary structure but is not a manager")
-        raise HTTPException(status_code=403, detail="Only managers can view other users' salary structures")
-    
-    # Check if target user is a subordinate
-    if not is_subordinate(db, current_user, user_id):
-        logger.warning(f"User {current_user.id} attempted to view salary structure for non-subordinate {user_id}")
-        raise HTTPException(status_code=403, detail="Can only view salary structure of subordinates")
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, user_id)
     
     salary = db.query(SalaryStructure).filter(SalaryStructure.user_id == user_id).first()
     if not salary:
@@ -117,15 +104,8 @@ async def update_salary_structure(
 ):
     logger.info(f"User {current_user.id} attempting to update salary structure for user {user_id}")
     
-    # Check if current user is a manager
-    if not is_manager(db, current_user):
-        logger.warning(f"User {current_user.id} attempted to update salary structure but is not a manager")
-        raise HTTPException(status_code=403, detail="Only managers can update salary structures")
-    
-    # Check if target user is a subordinate
-    if not is_subordinate(db, current_user, user_id):
-        logger.warning(f"User {current_user.id} attempted to update salary structure for non-subordinate {user_id}")
-        raise HTTPException(status_code=403, detail="Can only update salary structure of subordinates")
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, user_id)
     
     db_salary = db.query(SalaryStructure).filter(SalaryStructure.user_id == user_id).first()
     if not db_salary:
@@ -212,7 +192,6 @@ async def get_my_active_benefits(
     
     return benefits
 
-
 @router.get("/benefits/user-active-benefits/{user_id}", response_model=List[BenefitResponse])
 async def get_user_active_benefits(
     user_id: int,
@@ -220,15 +199,8 @@ async def get_user_active_benefits(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get active benefits for a specific user (manager only, can only view subordinates)"""
-    # Check if current user is a manager
-    if not is_manager(db, current_user):
-        logger.warning(f"User {current_user.id} attempted to view user benefits but is not a manager")
-        raise HTTPException(status_code=403, detail="Only managers can view user benefits")
-    
-    # Check if target user is a subordinate
-    if not is_subordinate(db, current_user, user_id):
-        logger.warning(f"User {current_user.id} attempted to view benefits for non-subordinate {user_id}")
-        raise HTTPException(status_code=403, detail="Can only view benefits of subordinates")
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, user_id)
     
     # Get approved enrollments for the specific user
     active_enrollments = db.query(BenefitEnrollment).filter(
@@ -251,13 +223,12 @@ async def approve_enrollment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Check if current user is a manager
-    if not is_manager(db, current_user):
-        raise HTTPException(status_code=403, detail="Only managers can approve enrollments")
-    
     enrollment = db.query(BenefitEnrollment).filter(BenefitEnrollment.enrollment_id == enrollment_id).first()
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, enrollment.user_id)
     
     if enrollment.enrollment_status != "pending":
         raise HTTPException(status_code=400, detail="Enrollment is not in pending status")
@@ -277,13 +248,12 @@ async def reject_enrollment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Check if current user is a manager
-    if not is_manager(db, current_user):
-        raise HTTPException(status_code=403, detail="Only managers can reject enrollments")
-    
     enrollment = db.query(BenefitEnrollment).filter(BenefitEnrollment.enrollment_id == enrollment_id).first()
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, enrollment.user_id)
     
     if enrollment.enrollment_status != "pending":
         raise HTTPException(status_code=400, detail="Enrollment is not in pending status")

@@ -7,6 +7,7 @@ from database import get_db
 import models
 import schemas
 from auth import get_current_user
+from utils import verify_manager_permission
 
 router = APIRouter(
     prefix="/pms",
@@ -31,18 +32,8 @@ async def create_goal(
                 status_code=400,
                 detail="user_id is required for subordinate goals"
             )
-        # Verify the user is a subordinate
-        subordinate = db.query(models.User).filter(models.User.id == goal.user_id).first()
-        if not subordinate:
-            raise HTTPException(
-                status_code=404,
-                detail="Subordinate user not found"
-            )
-        if subordinate.manager_id != current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="You can only create goals for your direct subordinates"
-            )
+        # Verify manager permissions
+        verify_manager_permission(db, current_user, goal.user_id)
         user_id = goal.user_id
     else:
         user_id = current_user.id
@@ -175,11 +166,9 @@ async def delete_goal(
         )
     
     # Check if user has permission to delete
-    if db_goal.user_id != current_user.id and db_goal.user.manager_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this goal"
-        )
+    if db_goal.user_id != current_user.id:
+        # If not the owner, verify manager permissions
+        verify_manager_permission(db, current_user, db_goal.user_id)
     
     db.delete(db_goal)
     db.commit()
@@ -299,12 +288,8 @@ def approve_review(
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     
-    # Verify the current user is the manager of the review's user
-    if goal.user.manager_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only approve reviews for your direct subordinates"
-        )
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, goal.user_id)
     
     # Update the review
     review.status = "approved"
@@ -343,12 +328,8 @@ def reject_review(
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     
-    # Verify the current user is the manager of the review's user
-    if goal.user.manager_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only reject reviews for your direct subordinates"
-        )
+    # Verify manager permissions
+    verify_manager_permission(db, current_user, goal.user_id)
     
     # Update the review
     review.status = "rejected"
