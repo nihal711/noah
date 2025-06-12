@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint, JSON, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -28,6 +28,7 @@ class User(Base):
     goals = relationship("Goal", back_populates="user")
     performance_goals = relationship("PerformanceGoal", back_populates="user", foreign_keys="PerformanceGoal.user_id")
     performance_reviews = relationship("PerformanceReview", back_populates="user", foreign_keys="PerformanceReview.user_id")
+    overtime_requests = relationship("OvertimeRequest", back_populates="user")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -293,3 +294,19 @@ class Completion(Base):
     # Relationships
     user = relationship("User")
     course = relationship("Course", back_populates="completions") 
+
+class OvertimeRequest(Base):
+    __tablename__ = "overtime_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    hours = Column(Float, nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String, default="pending")  # pending, approved, rejected
+    manager_comments = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="overtime_requests") 

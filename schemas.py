@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 
 # User Schemas
@@ -210,7 +210,7 @@ class PayslipResponse(PayslipBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Salary Structure Schemas
 class SalaryStructureBase(BaseModel):
@@ -458,4 +458,55 @@ class EnrollmentFilter(BaseModel):
 
 class CompletionFilter(BaseModel):
     year: Optional[int] = None
-    course_id: Optional[int] = None 
+    course_id: Optional[int] = None
+
+# Overtime Request Schemas
+class OvertimeRequestBase(BaseModel):
+    date: date
+    hours: float
+    reason: str
+
+class OvertimeRequestCreate(OvertimeRequestBase):
+    pass
+
+class OvertimeRequestPartialUpdate(BaseModel):
+    date: Optional[date] = None
+    hours: Optional[float] = None
+    reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class OvertimeRequestUpdate(BaseModel):
+    date: date
+    hours: float
+    reason: str
+
+    class Config:
+        from_attributes = True
+
+class OvertimeRequestResponse(OvertimeRequestBase):
+    id: int
+    user_id: int
+    status: str
+    manager_comments: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class OvertimeRequestApproval(BaseModel):
+    manager_comments: Optional[str] = None
+
+class OvertimeRequestRejection(BaseModel):
+    manager_comments: str
+
+class UserOvertimeRequests(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    requests: List[OvertimeRequestResponse]
+
+    class Config:
+        from_attributes = True 
