@@ -11,6 +11,19 @@ class UserBase(BaseModel):
     department: str
     position: str
     manager_id: Optional[int] = None
+    jobtitle: Optional[str] = None
+    grade: Optional[str] = None
+    doj: Optional[datetime] = None
+    nationality: Optional[str] = None
+    rmempid: Optional[int] = None
+    linemanager: Optional[str] = None
+    workphone: Optional[str] = None
+    mobilephone: Optional[str] = None
+    sbu: Optional[str] = None
+    depid: Optional[str] = None
+    bankname: Optional[str] = None
+    branchname: Optional[str] = None
+    religion: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str

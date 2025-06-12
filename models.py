@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint, JSON, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, UniqueConstraint, JSON, Date, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -17,6 +17,19 @@ class User(Base):
     position = Column(String, nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    jobtitle = Column(String(500))
+    grade = Column(String(100))
+    doj = Column(DateTime)
+    nationality = Column(String(500))
+    rmempid = Column(BigInteger)
+    linemanager = Column(String(1000))
+    workphone = Column(String(100))
+    mobilephone = Column(String(200))
+    sbu = Column(String(10))
+    depid = Column(String(100))
+    bankname = Column(String(4000))
+    branchname = Column(String(4000))
+    religion = Column(String(500))
     
     # Essential relationships
     leave_requests = relationship("LeaveRequest", back_populates="user")
