@@ -2,11 +2,12 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, LeaveRequest, LeaveBalance
+from models import User, LeaveRequest, LeaveBalance, OvertimeRequest, OvertimeLeaveEntitlement, OvertimeLeaveEntitlementHistory
 from schemas import LeaveRequestCreate, LeaveRequestResponse, LeaveRequestUpdate, LeaveBalanceResponse, MessageResponse
 from auth import get_current_active_user
 from utils import verify_manager_permission
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import extract
 
 router = APIRouter(prefix="/leave", tags=["Leave Management"])
 
@@ -250,4 +251,85 @@ async def delete_leave_request(
     
     db.delete(leave_request)
     db.commit()
-    return {"message": "Leave request deleted successfully"} 
+    return {"message": "Leave request deleted successfully"}
+
+@router.get("/entitled/overtime", response_model=dict, summary="Get Overtime-based Leave Entitlement", description="Calculate leave entitlement based on approved overtime hours")
+async def get_overtime_leave_entitlement(
+    user_id: int,
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # Check if user is viewing their own entitlements
+    if user_id == current_user.id:
+        # Allow users to view their own entitlements
+        pass
+    else:
+        # For viewing other users' entitlements, verify manager permissions
+        try:
+            verify_manager_permission(db, current_user, user_id)
+        except HTTPException:
+            # If not a manager, check if user is HR/admin
+            if not current_user.is_hr and not current_user.is_admin:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only view your own overtime entitlements"
+                )
+    
+    # Get all approved overtime requests for the user in the specified year
+    overtime_requests = db.query(OvertimeRequest).filter(
+        OvertimeRequest.user_id == user_id,
+        extract('year', OvertimeRequest.date) == year,
+        OvertimeRequest.status == "approved"
+    ).all()
+    
+    # Calculate total overtime hours
+    total_overtime_hours = sum(request.hours for request in overtime_requests)
+    
+    # Get existing entitlement record
+    entitlement = db.query(OvertimeLeaveEntitlement).filter(
+        OvertimeLeaveEntitlement.user_id == user_id,
+        OvertimeLeaveEntitlement.year == year
+    ).first()
+    
+    # Calculate entitled days (8 hours = 1 day)
+    # Use integer division to get whole days
+    entitled_days = total_overtime_hours // 8
+    # Calculate remaining hours after whole days
+    remaining_hours = total_overtime_hours % 8
+    
+    if entitlement:
+        # Update existing record
+        entitlement.total_overtime_hours = total_overtime_hours
+        entitlement.entitled_leave_days = entitled_days
+        entitlement.remaining_overtime_hours = remaining_hours
+        entitlement.last_calculated_at = datetime.now()
+    else:
+        # Create new record
+        entitlement = OvertimeLeaveEntitlement(
+            user_id=user_id,
+            year=year,
+            total_overtime_hours=total_overtime_hours,
+            entitled_leave_days=entitled_days,
+            remaining_overtime_hours=remaining_hours
+        )
+        db.add(entitlement)
+    
+    try:
+        db.commit()
+        db.refresh(entitlement)
+        
+        return {
+            "user_id": user_id,
+            "year": year,
+            "total_overtime_hours": total_overtime_hours,
+            "entitled_leave_days": entitled_days,
+            "remaining_overtime_hours": remaining_hours,
+            "last_calculated_at": entitlement.last_calculated_at
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update overtime leave entitlement: {str(e)}"
+        ) 
