@@ -83,11 +83,13 @@ async def generate_payslip(
 
 @router.get("")
 async def get_payslips(
-    year: int = Query(..., ge=2000),
+    year: Optional[int] = Query(None, ge=2000),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Base query
+    if year is None:
+        year = datetime.now().year
+
     query = db.query(Payslip).filter(Payslip.year == year)
     
     # If user is not a manager, only show their payslips
@@ -99,6 +101,22 @@ async def get_payslips(
     payslips = query.order_by(Payslip.year.desc(), Payslip.month.desc()).all()
     
     return payslips
+
+@router.get("/get_single")
+async def get_single_payslip(
+    year: int = Query(..., ge=2000),
+    month: int = Query(..., ge=1, le=12),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    payslip = db.query(Payslip).filter(
+        Payslip.user_id == current_user.id,
+        Payslip.year == year,
+        Payslip.month == month
+    ).first()
+    if not payslip:
+        return {"message": "Payslip not generated for the given month and year"}
+    return payslip 
 
 @router.get("/{payslip_id}")
 async def get_payslip_details(
