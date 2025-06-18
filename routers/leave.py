@@ -1,11 +1,11 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import User, LeaveRequest, LeaveBalance, OvertimeRequest, OvertimeLeaveEntitlement, OvertimeLeaveEntitlementHistory
-from schemas import LeaveRequestCreate, LeaveRequestResponse, LeaveRequestUpdate, LeaveBalanceResponse, MessageResponse
+from schemas import LeaveRequestCreate, LeaveRequestResponse, LeaveRequestUpdate, LeaveBalanceResponse, MessageResponse, LeaveRequestWithEmployeeResponse
 from auth import get_current_active_user
-from utils import verify_manager_permission
+from utils import verify_manager_permission, is_manager
 from datetime import datetime, timedelta
 from sqlalchemy import extract
 
@@ -99,8 +99,61 @@ async def get_all_leave_requests(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
+
+    if not is_manager(db, current_user):
+        raise HTTPException(status_code=403, detail="Only managers can view all leave requests.")
     leave_requests = db.query(LeaveRequest).offset(skip).limit(limit).all()
     return leave_requests
+
+@router.get(
+    "/requests/pending-approval",
+    response_model=List[LeaveRequestWithEmployeeResponse],
+    summary="Get Pending Leave Requests for Manager Approval",
+    description="Retrieve all pending leave requests for subordinates of the current manager"
+)
+async def get_pending_requests_for_manager_approval(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if not is_manager(db, current_user):
+        raise HTTPException(status_code=403, detail="Only managers can view pending leave requests for approval.")
+
+    subordinates = db.query(User).filter(User.manager_id == current_user.id).all()
+    if not subordinates:
+        return []
+
+    subordinate_ids = [s.id for s in subordinates]
+
+    leave_requests = (
+        db.query(LeaveRequest)
+        .options(joinedload(LeaveRequest.user))
+        .filter(
+            LeaveRequest.user_id.in_(subordinate_ids),
+            LeaveRequest.status == "pending"
+        )
+        .all()
+    )
+
+    result = []
+    for req in leave_requests:
+        result.append(
+            LeaveRequestWithEmployeeResponse(
+                id=req.id,
+                user_id=req.user_id,
+                leave_type=req.leave_type,
+                start_date=req.start_date,
+                end_date=req.end_date,
+                days_requested=req.days_requested,
+                reason=req.reason,
+                status=req.status,
+                manager_comments=req.manager_comments,
+                created_at=req.created_at,
+                updated_at=req.updated_at,
+                employee_name=req.user.username if req.user else None,
+                employee_email=req.user.email if req.user else None,
+            )
+        )
+    return result
 
 @router.get("/requests/{request_id}", response_model=LeaveRequestResponse, summary="Get Leave Request by ID", description="Retrieve a specific leave request by ID")
 async def get_leave_request(
@@ -255,81 +308,35 @@ async def delete_leave_request(
 
 @router.get("/entitled/overtime", response_model=dict, summary="Get Overtime-based Leave Entitlement", description="Calculate leave entitlement based on approved overtime hours")
 async def get_overtime_leave_entitlement(
-    user_id: int,
-    year: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     # Check if user is viewing their own entitlements
-    if user_id == current_user.id:
-        # Allow users to view their own entitlements
-        pass
-    else:
-        # For viewing other users' entitlements, verify manager permissions
-        try:
-            verify_manager_permission(db, current_user, user_id)
-        except HTTPException:
-            # If not a manager, check if user is HR/admin
-            if not current_user.is_hr and not current_user.is_admin:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only view your own overtime entitlements"
-                )
-    
-    # Get all approved overtime requests for the user in the specified year
-    overtime_requests = db.query(OvertimeRequest).filter(
-        OvertimeRequest.user_id == user_id,
-        extract('year', OvertimeRequest.date) == year,
-        OvertimeRequest.status == "approved"
-    ).all()
-    
-    # Calculate total overtime hours
-    total_overtime_hours = sum(request.hours for request in overtime_requests)
-    
-    # Get existing entitlement record
-    entitlement = db.query(OvertimeLeaveEntitlement).filter(
-        OvertimeLeaveEntitlement.user_id == user_id,
-        OvertimeLeaveEntitlement.year == year
+    # User ID is taken from the authenticated user
+    user_id_to_check = current_user.id
+    current_year = datetime.now().year
+
+    # Fetch the latest overtime leave entitlement for the user and year
+    overtime_entitlement = db.query(OvertimeLeaveEntitlement).filter(
+        OvertimeLeaveEntitlement.user_id == user_id_to_check,
+        OvertimeLeaveEntitlement.year == current_year
     ).first()
-    
-    # Calculate entitled days (8 hours = 1 day)
-    # Use integer division to get whole days
-    entitled_days = total_overtime_hours // 8
-    # Calculate remaining hours after whole days
-    remaining_hours = total_overtime_hours % 8
-    
-    if entitlement:
-        # Update existing record
-        entitlement.total_overtime_hours = total_overtime_hours
-        entitlement.entitled_leave_days = entitled_days
-        entitlement.remaining_overtime_hours = remaining_hours
-        entitlement.last_calculated_at = datetime.now()
-    else:
-        # Create new record
-        entitlement = OvertimeLeaveEntitlement(
-            user_id=user_id,
-            year=year,
-            total_overtime_hours=total_overtime_hours,
-            entitled_leave_days=entitled_days,
-            remaining_overtime_hours=remaining_hours
-        )
-        db.add(entitlement)
-    
-    try:
-        db.commit()
-        db.refresh(entitlement)
-        
+
+    if not overtime_entitlement:
         return {
-            "user_id": user_id,
-            "year": year,
-            "total_overtime_hours": total_overtime_hours,
-            "entitled_leave_days": entitled_days,
-            "remaining_overtime_hours": remaining_hours,
-            "last_calculated_at": entitlement.last_calculated_at
+            "user_id": user_id_to_check,
+            "year": current_year,
+            "total_overtime_hours": 0,
+            "entitled_leave_days": 0,
+            "remaining_overtime_hours": 0,
+            "last_calculated_at": None
         }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update overtime leave entitlement: {str(e)}"
-        ) 
+
+    return {
+        "user_id": overtime_entitlement.user_id,
+        "year": overtime_entitlement.year,
+        "total_overtime_hours": overtime_entitlement.total_overtime_hours,
+        "entitled_leave_days": overtime_entitlement.entitled_leave_days,
+        "remaining_overtime_hours": overtime_entitlement.remaining_overtime_hours,
+        "last_calculated_at": overtime_entitlement.last_calculated_at.isoformat() + "Z" if overtime_entitlement.last_calculated_at else None
+    }

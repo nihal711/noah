@@ -70,6 +70,11 @@ class LeaveRequestResponse(LeaveRequestBase):
     class Config:
         from_attributes = True
 
+class LeaveRequestWithEmployeeResponse(LeaveRequestResponse):
+    employee_name: Optional[str] = None
+    employee_email: Optional[str] = None
+    
+
 class LeaveRequestUpdate(BaseModel):
     status: str
     manager_comments: Optional[str] = None
