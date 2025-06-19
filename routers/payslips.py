@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 import calendar
 
@@ -23,23 +23,31 @@ async def get_payslip_periods(
     current_date = datetime.now()
     current_month = current_date.month
     current_year = current_date.year
-    
+
     periods = []
-    for i in range(3):
-        month = current_month - i
-        year = current_year
-        
-        if month <= 0:
-            month += 12
-            year -= 1
-            
-        month_name = calendar.month_name[month]
-        periods.append({
-            "month": month,
-            "month_name": month_name,
-            "year": year
-        })
-    
+
+    if current_month == 1:
+        # If January, show all months of previous year
+        year = current_year - 1
+        for month in range(1, 13):
+            month_name = calendar.month_name[month]
+            periods.append({
+                "label": f"{month_name} {year}",
+                "month": month,
+                "month_name": month_name,
+                "year": year
+            })
+    else:
+        # Otherwise, show Jan to previous month of current year
+        for month in range(1, current_month):
+            month_name = calendar.month_name[month]
+            periods.append({
+                "label": f"{month_name} {current_year}",
+                "month": month,
+                "month_name": month_name,
+                "year": current_year
+            })
+
     return periods
 
 @router.post("/generate")

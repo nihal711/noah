@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noah User Registration</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 30px 40px 20px 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { text-align: center; margin-bottom: 24px; }
+    label { display: block; margin-top: 16px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 24px; width: 100%; padding: 10px; background: #1976d2; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #125ea8; }
+    .optional-toggle { background: none; color: #1976d2; border: none; cursor: pointer; margin-top: 18px; margin-bottom: 8px; font-size: 15px; text-decoration: underline; }
+    .optional-fields { display: none; margin-top: 10px; max-height: 250px; overflow-y: auto; background: #f2f6fa; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
+    .message { margin-top: 18px; text-align: center; font-weight: bold; }
+    /* Hide number input spinners/arrows for all browsers */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>User Registration</h2>
+    <form id="registerForm">
+      <label>Username*</label>
+      <input type="text" name="username" required>
+      <label>Email*</label>
+      <input type="email" name="email" required>
+      <label>Full Name*</label>
+      <input type="text" name="full_name" required>
+      <label>Employee ID*</label>
+      <input type="text" name="employee_id" required>
+      <label>Department*</label>
+      <input type="text" name="department" required>
+      <label>Position*</label>
+      <input type="text" name="position" required>
+      <label>Password*</label>
+      <input type="password" name="password" required>
+
+      <button type="button" class="optional-toggle" onclick="toggleOptional()">Show optional fields</button>
+      <div class="optional-fields" id="optionalFields">
+        <label>Grade</label>
+        <select name="grade">
+          <option value="">Select grade</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <label>Manager ID</label>
+        <input type="number" name="manager_id">
+        <label>Date of Joining</label>
+        <input type="date" name="doj">
+        <label>Line Manager</label>
+        <input type="text" name="linemanager">
+        <label>Mobile Phone</label>
+        <input type="text" name="mobilephone">
+        <label>Bank Name</label>
+        <input type="text" name="bankname">
+        <label>Branch Name</label>
+        <input type="text" name="branchname">
+      </div>
+      <button type="submit">Register</button>
+    </form>
+    <div class="message" id="result"></div>
+  </div>
+  <script>
+    function toggleOptional() {
+      const opt = document.getElementById('optionalFields');
+      const btn = document.querySelector('.optional-toggle');
+      if (opt.style.display === 'block') {
+        opt.style.display = 'none';
+        btn.textContent = 'Show optional fields';
+      } else {
+        opt.style.display = 'block';
+        btn.textContent = 'Hide optional fields';
+      }
+    }
+    document.getElementById('registerForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const result = document.getElementById('result');
+      // Email validation (HTML5 handles most, but add extra check)
+      const email = form.email.value.trim();
+      if (!email.match(/^\S+@\S+\.\S+$/)) {
+        result.style.color = 'red';
+        result.innerText = 'Please enter a valid email address.';
+        return;
+      }
+      // Mobile phone validation (E.164 international: optional +, 8-15 digits)
+      const mobile = form.mobilephone.value.trim();
+      if (mobile && !mobile.match(/^\+?\d{8,15}$/)) {
+        result.style.color = 'red';
+        result.innerText = 'Please enter a valid phone number (8-15 digits, optional leading +, no spaces or symbols).';
+        return;
+      }
+      const data = {};
+      // Required fields
+      data.username = form.username.value;
+      data.email = email;
+      data.full_name = form.full_name.value;
+      data.employee_id = form.employee_id.value;
+      data.department = form.department.value;
+      data.position = form.position.value;
+      data.password = form.password.value;
+      // Optional fields
+      [
+        'manager_id','grade','doj','linemanager','mobilephone','bankname','branchname'
+      ].forEach(f => {
+        if (form[f] && form[f].value) data[f] = form[f].value;
+      });
+      // Convert date to ISO if present
+      if (data.doj) data.doj = new Date(data.doj).toISOString();
+      const res = await fetch('/users/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        result.style.color = 'green';
+        result.innerText = 'User registered successfully!';
+        form.reset();
+      } else {
+        let errMsg = 'There was a problem registering the user. Please contact admin.';
+        try {
+          const err = await res.json();
+          if (err && err.detail) errMsg = err.detail;
+        } catch {}
+        result.style.color = 'red';
+        console.log('Setting error:', errMsg);
+        result.innerText = errMsg;
+      }
+      setTimeout(() => { result.innerText = ''; }, 30000);
+    };
+  </script>
+</body>
+</html> 

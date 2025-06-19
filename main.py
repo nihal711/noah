@@ -5,6 +5,7 @@ from database import engine, get_db
 import models
 from routers import auth, users, leave, bank_letter, visa_letter, requests, payslips, salary_benefits, pms, lms, overtime
 from sqlalchemy import text
+from fastapi.staticfiles import StaticFiles
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -101,6 +102,8 @@ app.include_router(pms.router)
 app.include_router(lms.router, prefix="/lms", tags=["LMS"])
 app.include_router(overtime.router)
 
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -117,7 +120,7 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health_check(db: Session = Depends(get_db)):
-    """
+    """cl
     Health check endpoint to verify API and database connectivity.
     """
     try:
