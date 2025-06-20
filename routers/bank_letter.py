@@ -87,7 +87,7 @@ async def update_bank_letter_request(
         raise HTTPException(status_code=404, detail="Bank letter request not found")
     
     bank_letter_request.status = update_data.status
-    bank_letter_request.hr_comments = update_data.hr_comments
+    bank_letter_request.approver_comments = update_data.approver_comments
     
     db.commit()
     db.refresh(bank_letter_request)
@@ -132,7 +132,7 @@ def is_subordinate(db: Session, manager: User, user_id: int) -> bool:
 @router.put("/{request_id}/approve", response_model=BankLetterRequestResponse)
 async def approve_bank_letter_request(
     request_id: int,
-    manager_comments: str = Body(..., embed=True),
+    approver_comments: str = Body(..., embed=True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -160,7 +160,7 @@ async def approve_bank_letter_request(
     
     # Update the request
     bank_letter_request.status = "approved"
-    bank_letter_request.hr_comments = manager_comments
+    bank_letter_request.approver_comments = approver_comments
     
     db.commit()
     db.refresh(bank_letter_request)
@@ -169,7 +169,7 @@ async def approve_bank_letter_request(
 @router.put("/{request_id}/reject", response_model=BankLetterRequestResponse)
 async def reject_bank_letter_request(
     request_id: int,
-    manager_comments: str = Body(..., embed=True),
+    approver_comments: str = Body(..., embed=True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -197,7 +197,7 @@ async def reject_bank_letter_request(
     
     # Update the request
     bank_letter_request.status = "rejected"
-    bank_letter_request.hr_comments = manager_comments
+    bank_letter_request.approver_comments = approver_comments
     
     db.commit()
     db.refresh(bank_letter_request)

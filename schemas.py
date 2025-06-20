@@ -327,7 +327,7 @@ class ReviewBase(BaseModel):
     user_id: int
     goal_id: int
     overall_rating: int
-    comments: str
+    comments: str  # Employee's self-review
 
 class ReviewCreate(BaseModel):
     goal_id: int = Field(..., description="ID of the goal being reviewed")
@@ -337,7 +337,7 @@ class ReviewCreate(BaseModel):
         le=5,
         description="Overall rating for the goal (1-5)"
     )
-    comments: str = Field(..., description="Review comments")
+    comments: str = Field(..., description="Employee's review comments")
 
 class ReviewResponse(BaseModel):
     review_id: int
@@ -345,10 +345,10 @@ class ReviewResponse(BaseModel):
     goal_id: int
     year: int
     overall_rating: int = Field(..., ge=1, le=5)
-    comments: str
+    comments: str  # Employee's self-review
     status: str
     approver_rating: Optional[int] = Field(None, ge=1, le=5)
-    approver_comments: Optional[str] = None
+    approver_comments: Optional[str] = None  # Manager/approver's comments
     goal: GoalResponse
 
     class Config:
@@ -361,10 +361,10 @@ class ManagerReview(BaseModel):
         le=5,
         description="Manager's rating for the review (1-5)"
     )
-    comments: str = Field(..., description="Manager's review comments")
+    approver_comments: str = Field(..., description="Manager's review comments")
 
 class ReviewRejection(BaseModel):
-    comments: str = Field(..., description="Reason for rejecting the review")
+    approver_comments: str = Field(..., description="Reason for rejecting the review")
 
 class ReviewStatusResponse(BaseModel):
     goal_title: str

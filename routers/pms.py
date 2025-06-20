@@ -203,7 +203,7 @@ async def create_self_review(
         goal_id=review.goal_id,
         year=db_goal.year,  # Get year from the goal
         overall_rating=review.overall_rating,
-        comments=review.comments,
+        approver_comments=review.approver_comments,
         status="pending"
     )
     
@@ -294,7 +294,7 @@ def approve_review(
     # Update the review
     review.status = "approved"
     review.manager_rating = approval.rating
-    review.approver_comments = approval.comments
+    review.approver_comments = approval.approver_comments
     
     db.commit()
     db.refresh(review)
@@ -333,7 +333,7 @@ def reject_review(
     
     # Update the review
     review.status = "rejected"
-    review.approver_comments = rejection.comments
+    review.approver_comments = rejection.approver_comments
     
     db.commit()
     db.refresh(review)

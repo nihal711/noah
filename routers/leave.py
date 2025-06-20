@@ -146,7 +146,7 @@ async def get_pending_requests_for_manager_approval(
                 days_requested=req.days_requested,
                 reason=req.reason,
                 status=req.status,
-                manager_comments=req.manager_comments,
+                approver_comments=req.approver_comments,
                 created_at=req.created_at,
                 updated_at=req.updated_at,
                 employee_name=req.user.username if req.user else None,
@@ -184,7 +184,7 @@ async def update_leave_request(
         raise HTTPException(status_code=404, detail="Leave request not found")
     
     leave_request.status = update_data.status
-    leave_request.manager_comments = update_data.manager_comments
+    leave_request.approver_comments = update_data.approver_comments
     
     db.commit()
     db.refresh(leave_request)
@@ -193,7 +193,7 @@ async def update_leave_request(
 @router.put("/requests/{request_id}/approve", response_model=LeaveRequestResponse, summary="Approve Leave Request", description="Approve a leave request (manager function)")
 async def approve_leave_request(
     request_id: int,
-    manager_comments: str = None,
+    approver_comments: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -217,7 +217,7 @@ async def approve_leave_request(
         
         # Update leave request status
         leave_request.status = "approved"
-        leave_request.manager_comments = manager_comments
+        leave_request.approver_comments = approver_comments
         
         # Update leave balance
         update_leave_balance(db, leave_request.user_id, leave_request.leave_type, leave_request.days_requested)
@@ -230,7 +230,7 @@ async def approve_leave_request(
         if e.status_code == status.HTTP_400_BAD_REQUEST and "Insufficient" in str(e.detail):
             # Auto-reject the request with clear reason
             leave_request.status = "rejected"
-            leave_request.manager_comments = f"Request automatically rejected: {str(e.detail)}"
+            leave_request.approver_comments = f"Request automatically rejected: {str(e.detail)}"
             db.commit()
             db.refresh(leave_request)
             return leave_request
@@ -241,7 +241,7 @@ async def approve_leave_request(
 @router.put("/requests/{request_id}/reject", response_model=LeaveRequestResponse, summary="Reject Leave Request", description="Reject a leave request (manager function)")
 async def reject_leave_request(
     request_id: int,
-    manager_comments: str = None,
+    approver_comments: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -261,7 +261,7 @@ async def reject_leave_request(
     
     # Update leave request
     leave_request.status = "rejected"
-    leave_request.manager_comments = manager_comments
+    leave_request.approver_comments = approver_comments
     
     db.commit()
     db.refresh(leave_request)
