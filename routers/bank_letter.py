@@ -19,7 +19,7 @@ async def request_bank_letter(
     db_bank_letter_request = BankLetterRequest(
         user_id=current_user.id,
         bank_name=bank_letter_request.bankName,
-        purpose=bank_letter_request.type,
+        type=bank_letter_request.type,
         additional_details=bank_letter_request.comment
     )
     db.add(db_bank_letter_request)

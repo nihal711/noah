@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, VisaLetterRequest, Attachment
@@ -88,7 +88,7 @@ async def update_visa_letter_request(
         raise HTTPException(status_code=404, detail="Visa letter request not found")
     
     visa_letter_request.status = update_data.status
-    visa_letter_request.hr_comments = update_data.hr_comments
+    visa_letter_request.approver_comments = update_data.approver_comments
     
     db.commit()
     db.refresh(visa_letter_request)
@@ -113,4 +113,36 @@ async def delete_visa_letter_request(
     
     db.delete(visa_letter_request)
     db.commit()
-    return {"message": "Visa letter request deleted successfully"} 
+    return {"message": "Visa letter request deleted successfully"}
+
+@router.put("/{request_id}/approve", response_model=VisaLetterRequestResponse)
+async def approve_visa_letter_request(
+    request_id: int,
+    approver_comments: str = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    visa_letter_request = db.query(VisaLetterRequest).filter(VisaLetterRequest.id == request_id).first()
+    if visa_letter_request is None:
+        raise HTTPException(status_code=404, detail="Visa letter request not found")
+    visa_letter_request.status = "approved"
+    visa_letter_request.approver_comments = approver_comments
+    db.commit()
+    db.refresh(visa_letter_request)
+    return visa_letter_request
+
+@router.put("/{request_id}/reject", response_model=VisaLetterRequestResponse)
+async def reject_visa_letter_request(
+    request_id: int,
+    approver_comments: str = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    visa_letter_request = db.query(VisaLetterRequest).filter(VisaLetterRequest.id == request_id).first()
+    if visa_letter_request is None:
+        raise HTTPException(status_code=404, detail="Visa letter request not found")
+    visa_letter_request.status = "rejected"
+    visa_letter_request.approver_comments = approver_comments
+    db.commit()
+    db.refresh(visa_letter_request)
+    return visa_letter_request 

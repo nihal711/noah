@@ -169,55 +169,43 @@ async def delete_payslip(
 @router.put("/{payslip_id}/approve")
 async def approve_payslip(
     payslip_id: int,
+    approver_comments: str = Body(None, embed=True),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     payslip = db.query(Payslip).filter(Payslip.payslip_id == payslip_id).first()
-    
     if not payslip:
         raise HTTPException(status_code=404, detail="Payslip not found")
-    
-    # Check if current user is the manager of the payslip owner
     if payslip.user.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the employee's manager can approve payslips")
-    
     if payslip.status != "pending":
         raise HTTPException(status_code=400, detail="Payslip is not in pending status")
-    
     payslip.status = "approved"
     payslip.approved_by = current_user.id
     payslip.approved_at = datetime.now()
-    
+    payslip.approver_comments = approver_comments
     db.commit()
     db.refresh(payslip)
-    
     return payslip
 
 @router.put("/{payslip_id}/reject")
 async def reject_payslip(
     payslip_id: int,
-    reason: str = Body(..., embed=True),
+    approver_comments: str = Body(None, embed=True),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     payslip = db.query(Payslip).filter(Payslip.payslip_id == payslip_id).first()
-    
     if not payslip:
         raise HTTPException(status_code=404, detail="Payslip not found")
-    
-    # Check if current user is the manager of the payslip owner
     if payslip.user.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the employee's manager can reject payslips")
-    
     if payslip.status != "pending":
         raise HTTPException(status_code=400, detail="Payslip is not in pending status")
-    
     payslip.status = "rejected"
     payslip.approved_by = current_user.id
     payslip.approved_at = datetime.now()
-    payslip.rejection_reason = reason
-    
+    payslip.approver_comments = approver_comments
     db.commit()
     db.refresh(payslip)
-    
     return payslip 

@@ -263,7 +263,7 @@ async def get_all_reviews(
 @router.put("/reviews/{review_id}/approve", response_model=schemas.ReviewResponse)
 def approve_review(
     review_id: int,
-    manager_review: schemas.ManagerReview,
+    approval: schemas.ManagerReview,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -293,8 +293,8 @@ def approve_review(
     
     # Update the review
     review.status = "approved"
-    review.manager_rating = manager_review.rating
-    review.manager_comments = manager_review.comments
+    review.manager_rating = approval.rating
+    review.approver_comments = approval.comments
     
     db.commit()
     db.refresh(review)
@@ -333,7 +333,7 @@ def reject_review(
     
     # Update the review
     review.status = "rejected"
-    review.manager_comments = rejection.comments
+    review.approver_comments = rejection.comments
     
     db.commit()
     db.refresh(review)

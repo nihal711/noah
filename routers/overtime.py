@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -196,7 +196,7 @@ async def delete_overtime_request(
 @router.put("/requests/{request_id}/approve", response_model=schemas.OvertimeRequestResponse)
 async def approve_overtime_request(
     request_id: int,
-    approval: schemas.OvertimeRequestApproval,
+    approver_comments: str = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -228,7 +228,7 @@ async def approve_overtime_request(
         )
     
     db_request.status = "approved"
-    db_request.manager_comments = approval.manager_comments
+    db_request.approver_comments = approver_comments
     
     db.commit()
     db.refresh(db_request)
@@ -238,7 +238,7 @@ async def approve_overtime_request(
 @router.put("/requests/{request_id}/reject", response_model=schemas.OvertimeRequestResponse)
 async def reject_overtime_request(
     request_id: int,
-    rejection: schemas.OvertimeRequestRejection,
+    approver_comments: str = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -270,7 +270,7 @@ async def reject_overtime_request(
         )
     
     db_request.status = "rejected"
-    db_request.manager_comments = rejection.manager_comments
+    db_request.approver_comments = approver_comments
     
     db.commit()
     db.refresh(db_request)

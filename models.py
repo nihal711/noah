@@ -48,7 +48,7 @@ class LeaveRequest(Base):
     days_requested = Column(Float, nullable=False)
     reason = Column(Text, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected
-    manager_comments = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -86,10 +86,10 @@ class BankLetterRequest(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     bank_name = Column(String, nullable=False)
-    purpose = Column(String, nullable=False)
+    type = Column(String, nullable=False)
     additional_details = Column(Text, nullable=True)
     status = Column(String, default="pending")  # pending, approved, rejected, completed
-    hr_comments = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -108,7 +108,7 @@ class VisaLetterRequest(Base):
     addressed_to = Column(String, nullable=False)
     country = Column(String, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected, completed
-    hr_comments = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -131,6 +131,7 @@ class Payslip(Base):
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     rejection_reason = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -252,7 +253,9 @@ class PerformanceReview(Base):
     comments = Column(Text, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected
     manager_rating = Column(Integer, nullable=True)
-    manager_comments = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="performance_reviews")
@@ -311,7 +314,7 @@ class OvertimeRequest(Base):
     hours = Column(Float, nullable=False)
     reason = Column(Text, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected
-    manager_comments = Column(Text, nullable=True)
+    approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

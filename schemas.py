@@ -57,7 +57,7 @@ class LeaveRequestResponse(LeaveRequestBase):
     id: int
     user_id: int
     status: str
-    manager_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -71,7 +71,7 @@ class LeaveRequestWithEmployeeResponse(LeaveRequestResponse):
 
 class LeaveRequestUpdate(BaseModel):
     status: str
-    manager_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
 
 # Leave Balance Schemas
 class LeaveBalanceBase(BaseModel):
@@ -130,7 +130,7 @@ class BankLetterRequestResponse(BaseModel):
     purpose: str
     additional_details: Optional[str] = None
     status: str
-    hr_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     attachments: List[AttachmentResponse] = []
@@ -140,7 +140,7 @@ class BankLetterRequestResponse(BaseModel):
 
 class BankLetterRequestUpdate(BaseModel):
     status: str
-    hr_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
 
 # Visa Letter Request Schemas
 class VisaLetterRequestBase(BaseModel):
@@ -162,7 +162,7 @@ class VisaLetterRequestResponse(BaseModel):
     addressed_to: str
     country: str
     status: str
-    hr_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     attachments: List[AttachmentResponse] = []
@@ -172,7 +172,7 @@ class VisaLetterRequestResponse(BaseModel):
 
 class VisaLetterRequestUpdate(BaseModel):
     status: str
-    hr_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
 
 # Generic Response Schemas
 class MessageResponse(BaseModel):
@@ -190,6 +190,9 @@ class RequestSummary(BaseModel):
     status: str
     created_at: datetime
     updated_at: Optional[datetime] = None
+    user_id: int
+    user_full_name: str
+    user_email: str
     
     class Config:
         from_attributes = True
@@ -215,6 +218,7 @@ class PayslipResponse(PayslipBase):
     payslip_id: int
     user_id: int
     status: str
+    approver_comments: Optional[str] = None
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
@@ -343,8 +347,8 @@ class ReviewResponse(BaseModel):
     overall_rating: int = Field(..., ge=1, le=5)
     comments: str
     status: str
-    manager_rating: Optional[int] = Field(None, ge=1, le=5)
-    manager_comments: Optional[str] = None
+    approver_rating: Optional[int] = Field(None, ge=1, le=5)
+    approver_comments: Optional[str] = None
     goal: GoalResponse
 
     class Config:
@@ -366,8 +370,8 @@ class ReviewStatusResponse(BaseModel):
     goal_title: str
     review_status: str
     overall_rating: int = Field(..., ge=1, le=5)
-    manager_rating: Optional[int] = Field(None, ge=1, le=5)
-    manager_comments: Optional[str] = None
+    approver_rating: Optional[int] = Field(None, ge=1, le=5)
+    approver_comments: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -501,7 +505,7 @@ class OvertimeRequestResponse(OvertimeRequestBase):
     id: int
     user_id: int
     status: str
-    manager_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -509,10 +513,10 @@ class OvertimeRequestResponse(OvertimeRequestBase):
         from_attributes = True
 
 class OvertimeRequestApproval(BaseModel):
-    manager_comments: Optional[str] = None
+    approver_comments: Optional[str] = None
 
 class OvertimeRequestRejection(BaseModel):
-    manager_comments: str
+    approver_comments: str
 
 class UserOvertimeRequests(BaseModel):
     user_id: int

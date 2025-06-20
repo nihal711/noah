@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from database import get_db
-from models import Course, Enrollment, Completion
+from models import Course, Enrollment, Completion, User
 from schemas import (
     CourseCreate,
     CourseResponse,
@@ -17,7 +17,7 @@ from schemas import (
     EnrollmentFilter,
     CompletionFilter
 )
-from auth import get_current_user
+from auth import get_current_active_user, get_current_user
 
 router = APIRouter()
 
@@ -45,6 +45,7 @@ def get_courses(
     category: Optional[str] = None,
     instructor: Optional[str] = None,
     is_active: Optional[bool] = None,
+    current_user: User = Depends(get_current_active_user)
 
 ):
     """
@@ -65,7 +66,8 @@ def get_courses(
 def get_course(
     *,
     db: Session = Depends(get_db),
-    course_id: int
+    course_id: int,
+    current_user = Depends(get_current_user)
 ):
     """
     Get a specific course by ID.
