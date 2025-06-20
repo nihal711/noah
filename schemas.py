@@ -221,7 +221,7 @@ class PayslipResponse(PayslipBase):
     approver_comments: Optional[str] = None
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
-    rejection_reason: Optional[str] = None
+    approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
