@@ -61,7 +61,7 @@ async def preview_overtime_request(
         message=message
     )
 
-@router.post("/requests", response_model=OvertimeRequestResponse, summary="Create Overtime Request", description="Submit a new overtime request. Optionally attach a file. Preview leave entitlement before submitting.")
+@router.post("/request", response_model=OvertimeRequestResponse, summary="Create Overtime Request", description="Submit a new overtime request. Optionally attach a file. Preview leave entitlement before submitting.")
 async def create_overtime_request(
     request: OvertimeRequestCreate,
     db: Session = Depends(get_db),
@@ -131,7 +131,7 @@ async def create_overtime_request(
         message=message
     )
 
-@router.get("/requests", response_model=List[OvertimeRequestResponse], summary="Get My Overtime Requests", description="Get your overtime requests with leave days granted for each.")
+@router.get("/my_requests", response_model=List[OvertimeRequestResponse], summary="Get My Overtime Requests", description="Get your overtime requests with leave days granted for each.")
 async def get_my_overtime_requests(
     month: Optional[int] = None,
     year: Optional[int] = None,
@@ -166,7 +166,7 @@ async def get_my_overtime_requests(
         ))
     return responses
 
-@router.get("/requests/all", response_model=List[schemas.UserOvertimeRequests], summary="Get All Overtime Requests for Team", description="Managers: Get all overtime requests for your subordinates, with leave days granted for each.")
+@router.get("/all_requests", response_model=List[schemas.UserOvertimeRequests], summary="Get All Overtime Requests for Team", description="Managers: Get all overtime requests for your subordinates, with leave days granted for each.")
 async def get_all_overtime_requests(
     user_id: Optional[int] = None,
     month: Optional[int] = None,
@@ -225,7 +225,7 @@ async def get_all_overtime_requests(
             })
     return result
 
-@router.put("/requests/{request_id}", response_model=schemas.OvertimeRequestResponse)
+@router.put("/{request_id}", response_model=schemas.OvertimeRequestResponse)
 async def update_overtime_request(
     request_id: int,
     request_update: schemas.OvertimeRequestUpdate,
@@ -264,7 +264,7 @@ async def update_overtime_request(
     
     return db_request
 
-@router.delete("/requests/{request_id}")
+@router.delete("/{request_id}")
 async def delete_overtime_request(
     request_id: int,
     db: Session = Depends(get_db),
@@ -296,7 +296,7 @@ async def delete_overtime_request(
     
     return {"message": "Overtime request deleted successfully"}
 
-@router.put("/requests/{request_id}/approve", response_model=OvertimeRequestResponse, summary="Approve Overtime Request", description="Approve an overtime request. Only managers can approve. On approval, leave entitlement is granted if within cap. If the request would exceed the cap, only enough leave days to reach the cap are granted, and the rest are not converted.")
+@router.put("/{request_id}/approve", response_model=OvertimeRequestResponse, summary="Approve Overtime Request", description="Approve an overtime request. Only managers can approve. On approval, leave entitlement is granted if within cap. If the request would exceed the cap, only enough leave days to reach the cap are granted, and the rest are not converted.")
 async def approve_overtime_request(
     request_id: int,
     approver_comments: str = Body(None, embed=True),
@@ -416,7 +416,7 @@ async def approve_overtime_request(
         updated_at=db_request.updated_at
     )
 
-@router.put("/requests/{request_id}/reject", response_model=schemas.OvertimeRequestResponse)
+@router.put("/{request_id}/reject", response_model=schemas.OvertimeRequestResponse)
 async def reject_overtime_request(
     request_id: int,
     approver_comments: str = Body(None, embed=True),
@@ -458,7 +458,7 @@ async def reject_overtime_request(
     
     return db_request
 
-@router.patch("/requests/{request_id}", response_model=schemas.OvertimeRequestResponse)
+@router.patch("/{request_id}", response_model=schemas.OvertimeRequestResponse)
 async def patch_overtime_request(
     request_id: int,
     request_update: schemas.OvertimeRequestPartialUpdate,
