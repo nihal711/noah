@@ -311,7 +311,7 @@ class OvertimeRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     date = Column(Date, nullable=False)
     hours = Column(Float, nullable=False)
-    reason = Column(Text, nullable=False)
+    reason = Column(Text, nullable=True)
     status = Column(String, default="pending")  # pending, approved, rejected
     approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

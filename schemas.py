@@ -480,7 +480,7 @@ class CompletionFilter(BaseModel):
 class OvertimeRequestBase(BaseModel):
     date: date
     hours: float
-    reason: str
+    reason: Optional[str] = None
 
 class OvertimeRequestCreate(OvertimeRequestBase):
     attachment: Optional[AttachmentCreate] = None
@@ -489,15 +489,13 @@ class OvertimeRequestPartialUpdate(BaseModel):
     date: Optional[date] = None
     hours: Optional[float] = None
     reason: Optional[str] = None
-
     class Config:
         from_attributes = True
 
 class OvertimeRequestUpdate(BaseModel):
     date: date
     hours: float
-    reason: str
-
+    reason: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -510,7 +508,6 @@ class OvertimeRequestResponse(OvertimeRequestBase):
     updated_at: Optional[datetime] = None
     leave_days_granted: Optional[float] = None
     message: Optional[str] = None
-    
     class Config:
         from_attributes = True
 
