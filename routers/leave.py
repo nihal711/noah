@@ -2,12 +2,13 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
-from models import User, LeaveRequest, LeaveBalance, OvertimeRequest, OvertimeLeaveEntitlement, OvertimeLeaveEntitlementHistory
+from models import User, LeaveRequest, LeaveBalance, OvertimeRequest, OvertimeLeave
 from schemas import LeaveRequestCreate, LeaveRequestResponse, LeaveRequestUpdate, LeaveBalanceResponse, MessageResponse, LeaveRequestWithEmployeeResponse
 from auth import get_current_active_user
 from utils import verify_manager_permission, is_manager
 from datetime import datetime, timedelta
 from sqlalchemy import extract
+from sqlalchemy.sql import func
 
 router = APIRouter(prefix="/leave", tags=["Leave Management"])
 
@@ -306,37 +307,18 @@ async def delete_leave_request(
     db.commit()
     return {"message": "Leave request deleted successfully"}
 
-@router.get("/entitled/overtime", response_model=dict, summary="Get Overtime-based Leave Entitlement", description="Calculate leave entitlement based on approved overtime hours")
+@router.get("/entitled/overtime", response_model=dict, summary="Get Overtime-based Leave Entitlement", description="Get your total leave days entitled from approved overtime for the current year.")
 async def get_overtime_leave_entitlement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Check if user is viewing their own entitlements
-    # User ID is taken from the authenticated user
-    user_id_to_check = current_user.id
     current_year = datetime.now().year
-
-    # Fetch the latest overtime leave entitlement for the user and year
-    overtime_entitlement = db.query(OvertimeLeaveEntitlement).filter(
-        OvertimeLeaveEntitlement.user_id == user_id_to_check,
-        OvertimeLeaveEntitlement.year == current_year
-    ).first()
-
-    if not overtime_entitlement:
-        return {
-            "user_id": user_id_to_check,
-            "year": current_year,
-            "total_overtime_hours": 0,
-            "entitled_leave_days": 0,
-            "remaining_overtime_hours": 0,
-            "last_calculated_at": None
-        }
-
+    total_ot_leave = db.query(func.coalesce(func.sum(OvertimeLeave.leave_days), 0)).filter(
+        OvertimeLeave.user_id == current_user.id,
+        OvertimeLeave.year == current_year
+    ).scalar()
     return {
-        "user_id": overtime_entitlement.user_id,
-        "year": overtime_entitlement.year,
-        "total_overtime_hours": overtime_entitlement.total_overtime_hours,
-        "entitled_leave_days": overtime_entitlement.entitled_leave_days,
-        "remaining_overtime_hours": overtime_entitlement.remaining_overtime_hours,
-        "last_calculated_at": overtime_entitlement.last_calculated_at.isoformat() + "Z" if overtime_entitlement.last_calculated_at else None
+        "user_id": current_user.id,
+        "year": current_year,
+        "entitled_leave_days": total_ot_leave
     }

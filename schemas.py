@@ -483,7 +483,7 @@ class OvertimeRequestBase(BaseModel):
     reason: str
 
 class OvertimeRequestCreate(OvertimeRequestBase):
-    pass
+    attachment: Optional[AttachmentCreate] = None
 
 class OvertimeRequestPartialUpdate(BaseModel):
     date: Optional[date] = None
@@ -508,9 +508,17 @@ class OvertimeRequestResponse(OvertimeRequestBase):
     approver_comments: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    leave_days_granted: Optional[float] = None
+    message: Optional[str] = None
     
     class Config:
         from_attributes = True
+
+class OvertimePreviewResponse(BaseModel):
+    entitled_hours: float
+    entitled_leave_days: float
+    capped: bool
+    message: str
 
 class OvertimeRequestApproval(BaseModel):
     approver_comments: Optional[str] = None

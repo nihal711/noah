@@ -316,42 +316,22 @@ class OvertimeRequest(Base):
     approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    attachment_id = Column(Integer, ForeignKey("attachments.id"), nullable=True)
     
     # Relationships
-    user = relationship("User", back_populates="overtime_requests") 
+    user = relationship("User", back_populates="overtime_requests")
+    attachment = relationship("Attachment")
 
-class OvertimeLeaveEntitlement(Base):
-    __tablename__ = "overtime_leave_entitlements"
-    
+
+class OvertimeLeave(Base):
+    __tablename__ = "overtime_leaves"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    year = Column(Integer, nullable=False)
-    total_overtime_hours = Column(Float, nullable=False)
-    entitled_leave_days = Column(Float, nullable=False)
-    remaining_overtime_hours = Column(Float, nullable=False)
-    last_calculated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    user = relationship("User")
-    
-    __table_args__ = (
-        UniqueConstraint('user_id', 'year', name='uix_user_year_overtime_leave'),
-    ) 
-
-class OvertimeLeaveEntitlementHistory(Base):
-    __tablename__ = "overtime_leave_entitlement_history"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    year = Column(Integer, nullable=False)
     overtime_request_id = Column(Integer, ForeignKey("overtime_requests.id"), nullable=False)
-    hours_processed = Column(Float, nullable=False)
-    entitled_days_before = Column(Float, nullable=False)
-    remaining_hours_before = Column(Float, nullable=False)
-    entitled_days_after = Column(Float, nullable=False)
-    remaining_hours_after = Column(Float, nullable=False)
-    processed_at = Column(DateTime(timezone=True), server_default=func.now())
+    year = Column(Integer, nullable=False)
+    ot_hours = Column(Float, nullable=False)
+    leave_days = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
     user = relationship("User")
     overtime_request = relationship("OvertimeRequest") 
