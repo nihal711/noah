@@ -187,43 +187,6 @@ class BenefitEnrollment(Base):
     benefit = relationship("Benefit")
     approver = relationship("User", foreign_keys=[approved_by]) 
 
-class Goal(Base):
-    __tablename__ = "goals"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    start_date = Column(DateTime(timezone=True), nullable=False)
-    end_date = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String, default="in_progress")  # not_started, in_progress, completed, cancelled
-    progress = Column(Integer, default=0)  # 0-100 percentage
-    category = Column(String, nullable=False)  # personal, team, organizational
-    priority = Column(String, default="medium")  # low, medium, high
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
-    user = relationship("User", back_populates="goals")
-    reviews = relationship("Review", back_populates="goal")
-
-class Review(Base):
-    __tablename__ = "reviews"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=False)
-    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    rating = Column(Integer, nullable=False)  # 1-5 scale
-    feedback = Column(Text, nullable=False)
-    review_date = Column(DateTime(timezone=True), nullable=False)
-    review_type = Column(String, nullable=False)  # mid_year, end_year, quarterly
-    status = Column(String, default="pending")  # pending, submitted, acknowledged
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
-    goal = relationship("Goal", back_populates="reviews")
-    reviewer = relationship("User", foreign_keys=[reviewer_id]) 
 
 class PerformanceGoal(Base):
     __tablename__ = "performance_goals"
