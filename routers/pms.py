@@ -7,7 +7,7 @@ from database import get_db
 import models
 import schemas
 from auth import get_current_user
-from utils import verify_manager_permission
+from utils import verify_manager_permission, is_manager
 
 router = APIRouter(
     prefix="/pms",
@@ -56,13 +56,16 @@ async def create_goal(
 
 @router.get("/goals", response_model=List[schemas.GoalResponse])
 async def get_my_goals(
-    year: int,
+    year: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """
     Get goals for the current user for a specific year.
+    If year is not specified, returns goals for the current year.
     """
+    if year is None:
+        year = datetime.now().year
     goals = db.query(models.PerformanceGoal).filter(
         models.PerformanceGoal.user_id == current_user.id,
         models.PerformanceGoal.year == year
@@ -71,23 +74,29 @@ async def get_my_goals(
 
 @router.get("/goals/all", response_model=List[schemas.UserGoalsResponse])
 async def get_all_goals(
-    year: int,
+    year: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """
     Get all goals for team members (manager only), grouped by user.
+    If year is not specified, returns goals for the current year.
     """
+    if not is_manager(db, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can perform this action"
+        )
+        
+    if year is None:
+        year = datetime.now().year
     # Get all users who report to this manager
     team_members = db.query(models.User).filter(
         models.User.manager_id == current_user.id
     ).all()
     
     if not team_members:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have any team members"
-        )
+        return []
     
     # Get goals for each team member
     result = []
@@ -202,8 +211,11 @@ async def create_self_review(
         user_id=current_user.id,
         goal_id=review.goal_id,
         year=db_goal.year,  # Get year from the goal
+        achievements=review.achievements,
+        rating_quality=review.rating_quality,
+        rating_productivity=review.rating_productivity,
+        rating_communication=review.rating_communication,
         overall_rating=review.overall_rating,
-        approver_comments=review.approver_comments,
         status="pending"
     )
     
@@ -213,49 +225,111 @@ async def create_self_review(
     
     return db_review
 
-@router.get("/reviews", response_model=List[schemas.ReviewResponse])
-async def get_reviews(
+@router.get("/reviews/report", response_model=List[schemas.GoalReviewReportItem])
+async def get_performance_review_report(
+    user_id: Optional[int] = None,
     year: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """
-    Get all reviews for the current user.
-    If year is not specified, returns reviews for the current year.
+    Get performance review report.
+    - If user_id is provided, fetches report for that subordinate.
+    - If user_id is not provided, fetches report for the current user.
+    - If year is not specified, returns report for the current year.
     """
+    target_user_id = current_user.id
+    if user_id:
+        # If a user_id is provided, verify manager permission
+        verify_manager_permission(db, current_user, user_id)
+        target_user_id = user_id
+
     if year is None:
         year = datetime.now().year
         
-    reviews = db.query(models.PerformanceReview).filter(
-        models.PerformanceReview.user_id == current_user.id,
-        models.PerformanceReview.year == year
+    # Fetch all goals for the target user for the specified year
+    goals = db.query(models.PerformanceGoal).filter(
+        models.PerformanceGoal.user_id == target_user_id,
+        models.PerformanceGoal.year == year
     ).all()
+
+    report = []
+    for goal in goals:
+
+        review = db.query(models.PerformanceReview).filter(
+            models.PerformanceReview.goal_id == goal.goal_id
+        ).first()
+        report.append(schemas.GoalReviewReportItem(goal=goal, review=review))
     
-    return reviews
+    return report
 
 @router.get("/reviews/all", response_model=List[schemas.ReviewResponse])
 async def get_all_reviews(
-    year: int,
+    year: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """
     Get all reviews for team members (manager only).
+    If year is not specified, returns reviews for the current year.
     """
+    if not is_manager(db, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can perform this action"
+        )
+
+    if year is None:
+        year = datetime.now().year
     # Get all users who report to this manager
     team_members = db.query(models.User).filter(
         models.User.manager_id == current_user.id
     ).all()
     
     if not team_members:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have any team members"
-        )
+        return []
     
     team_member_ids = [member.id for member in team_members]
     reviews = db.query(models.PerformanceReview).filter(
-        models.PerformanceReview.user_id.in_(team_member_ids)
+        models.PerformanceReview.user_id.in_(team_member_ids),
+        models.PerformanceReview.year == year
+    ).all()
+    
+    return reviews
+
+@router.get("/reviews/pending", response_model=List[schemas.ReviewResponse])
+async def get_pending_reviews_for_manager(
+    year: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Get all pending reviews for a manager's team members.
+    If year is not specified, returns reviews for the current year.
+    """
+    if not is_manager(db, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can perform this action"
+        )
+        
+    if year is None:
+        year = datetime.now().year
+        
+    # Get all users who report to this manager
+    team_members = db.query(models.User).filter(
+        models.User.manager_id == current_user.id
+    ).all()
+    
+    if not team_members:
+        return []
+    
+    team_member_ids = [member.id for member in team_members]
+    
+    reviews = db.query(models.PerformanceReview).filter(
+        models.PerformanceReview.user_id.in_(team_member_ids),
+        models.PerformanceReview.status == "pending",
+        models.PerformanceReview.year == year
     ).all()
     
     return reviews
@@ -293,9 +367,10 @@ def approve_review(
     
     # Update the review
     review.status = "approved"
-    review.manager_rating = approval.rating
+    review.approver_rating_overall = approval.approver_rating_overall
     review.approver_comments = approval.approver_comments
-    
+    review.areas_for_improvement = approval.areas_for_improvement
+
     db.commit()
     db.refresh(review)
     return review
@@ -337,96 +412,4 @@ def reject_review(
     
     db.commit()
     db.refresh(review)
-    return review
-
-@router.get("/reviews/status", response_model=List[schemas.ReviewStatusResponse])
-async def get_review_status(
-    year: Optional[int] = None,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    """
-    Get review status for the current user.
-    If year is not specified, returns status for the current year.
-    """
-    if year is None:
-        year = datetime.now().year
-        
-    reviews = db.query(models.PerformanceReview).filter(
-        models.PerformanceReview.user_id == current_user.id,
-        models.PerformanceReview.year == year
-    ).all()
-    
-    return [
-        schemas.ReviewStatusResponse(
-            goal_title=review.goal.title,
-            review_status=review.status,
-            overall_rating=review.overall_rating,
-            manager_rating=review.manager_rating,
-            manager_comments=review.manager_comments
-        )
-        for review in reviews
-    ]
-
-# @router.get("/reviews/pending", response_model=List[schemas.ReviewResponse])
-# async def get_pending_reviews(
-#     year: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     """
-#     Get pending reviews for the current user.
-#     If year is not specified, returns pending reviews for the current year.
-#     """
-#     if year is None:
-#         year = datetime.now().year
-        
-#     reviews = db.query(models.PerformanceReview).filter(
-#         models.PerformanceReview.user_id == current_user.id,
-#         models.PerformanceReview.status == "pending",
-#         models.PerformanceReview.year == year
-#     ).all()
-    
-#     return reviews
-
-# @router.get("/reviews/approved", response_model=List[schemas.ReviewResponse])
-# async def get_approved_reviews(
-#     year: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     """
-#     Get approved reviews for the current user.
-#     If year is not specified, returns approved reviews for the current year.
-#     """
-#     if year is None:
-#         year = datetime.now().year
-#         
-#     reviews = db.query(models.PerformanceReview).filter(
-#         models.PerformanceReview.user_id == current_user.id,
-#         models.PerformanceReview.status == "approved",
-#         models.PerformanceReview.year == year
-#     ).all()
-#     
-#     return reviews
-
-# @router.get("/reviews/rejected", response_model=List[schemas.ReviewResponse])
-# async def get_rejected_reviews(
-#     year: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     """
-#     Get rejected reviews for the current user.
-#     If year is not specified, returns rejected reviews for the current year.
-#     """
-#     if year is None:
-#         year = datetime.now().year
-#         
-#     reviews = db.query(models.PerformanceReview).filter(
-#         models.PerformanceReview.user_id == current_user.id,
-#         models.PerformanceReview.status == "rejected",
-#         models.PerformanceReview.year == year
-#     ).all()
-#     
-#     return reviews 
+    return review 

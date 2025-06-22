@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from schemas import UserCreate, UserResponse, MessageResponse
-from auth import get_password_hash, get_current_active_user
+from auth import get_password_hash, get_current_active_user, get_current_user
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -53,6 +53,24 @@ async def read_user(user_id: int, db: Session = Depends(get_db), current_user: U
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@router.get("/subordinates/", response_model=List[UserResponse], summary="Get a list of direct subordinates")
+async def get_subordinates(
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """
+    Returns a list of users who report directly to the current user.
+    """
+    subordinates = db.query(User).filter(User.manager_id == current_user.id).all()
+    
+    if not subordinates:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You don't have any subordinates"
+        )
+        
+    return subordinates
 
 @router.delete("/{user_id}", response_model=MessageResponse, summary="Delete User", description="Delete a user account")
 async def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):

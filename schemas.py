@@ -331,37 +331,40 @@ class ReviewBase(BaseModel):
 
 class ReviewCreate(BaseModel):
     goal_id: int = Field(..., description="ID of the goal being reviewed")
-    overall_rating: int = Field(
-        ...,
-        ge=1,
-        le=5,
-        description="Overall rating for the goal (1-5)"
-    )
-    comments: str = Field(..., description="Employee's review comments")
+    achievements: str = Field(..., description="Employee's summary of accomplishments.")
+    rating_quality: int = Field(..., ge=1, le=5, description="Rating for quality of work (1-5).")
+    rating_productivity: int = Field(..., ge=1, le=5, description="Rating for productivity (1-5).")
+    rating_communication: int = Field(..., ge=1, le=5, description="Rating for communication (1-5).")
+    overall_rating: int = Field(..., ge=1, le=5, description="Overall self-rating for the goal (1-5)")
 
 class ReviewResponse(BaseModel):
     review_id: int
     user_id: int
     goal_id: int
     year: int
-    overall_rating: int = Field(..., ge=1, le=5)
-    comments: str  # Employee's self-review
+    overall_rating: Optional[int] = Field(None, ge=1, le=5)
+    achievements: Optional[str] = None
+    areas_for_improvement: Optional[str] = None
+    rating_quality: Optional[int] = Field(None, ge=1, le=5)
+    rating_productivity: Optional[int] = Field(None, ge=1, le=5)
+    rating_communication: Optional[int] = Field(None, ge=1, le=5)
     status: str
-    approver_rating: Optional[int] = Field(None, ge=1, le=5)
+    approver_rating_overall: Optional[int] = Field(None, ge=1, le=5)
     approver_comments: Optional[str] = None  # Manager/approver's comments
-    goal: GoalResponse
+    goal: "PerformanceGoal"
 
     class Config:
         from_attributes = True
 
 class ManagerReview(BaseModel):
-    rating: int = Field(
+    approver_rating_overall: int = Field(
         ...,
         ge=1,
         le=5,
         description="Manager's rating for the review (1-5)"
     )
     approver_comments: str = Field(..., description="Manager's review comments")
+    areas_for_improvement: str = Field(..., description="Manager's feedback on where to grow.")
 
 class ReviewRejection(BaseModel):
     approver_comments: str = Field(..., description="Reason for rejecting the review")
@@ -369,12 +372,34 @@ class ReviewRejection(BaseModel):
 class ReviewStatusResponse(BaseModel):
     goal_title: str
     review_status: str
-    overall_rating: int = Field(..., ge=1, le=5)
-    approver_rating: Optional[int] = Field(None, ge=1, le=5)
+    overall_rating: Optional[int] = Field(None, ge=1, le=5)
+    approver_rating_overall: Optional[int] = Field(None, ge=1, le=5)
     approver_comments: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class ReviewReportDetail(BaseModel):
+    review_id: int
+    user_id: int
+    goal_id: int
+    year: int
+    overall_rating: Optional[int] = Field(None, ge=1, le=5)
+    achievements: Optional[str] = None
+    areas_for_improvement: Optional[str] = None
+    rating_quality: Optional[int] = Field(None, ge=1, le=5)
+    rating_productivity: Optional[int] = Field(None, ge=1, le=5)
+    rating_communication: Optional[int] = Field(None, ge=1, le=5)
+    status: str
+    approver_rating_overall: Optional[int] = Field(None, ge=1, le=5)
+    approver_comments: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class GoalReviewReportItem(BaseModel):
+    goal: "PerformanceGoal"
+    review: Optional[ReviewReportDetail] = None
 
 class PerformanceGoalBase(BaseModel):
     title: str = Field(..., description="Title of the performance goal")
@@ -530,4 +555,7 @@ class UserOvertimeRequests(BaseModel):
     requests: List[OvertimeRequestResponse]
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+ReviewResponse.model_rebuild()
+GoalReviewReportItem.model_rebuild() 
