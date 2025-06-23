@@ -5,7 +5,7 @@ from datetime import datetime
 import calendar
 
 from database import get_db
-from models import Payslip, User
+from models import Payslip, User, SalaryStructure
 from schemas import PayslipCreate, PayslipResponse, PayslipUpdate
 from auth import get_current_user
 from utils import verify_manager_permission
@@ -67,10 +67,17 @@ async def generate_payslip(
     if existing_payslip:
         raise HTTPException(status_code=400, detail="Payslip already exists for this period")
     
-    # Create sample payslip data
-    basic_salary = 5000.0  # This should come from user's actual salary
-    allowances = 1000.0
-    deductions = 500.0
+    # Fetch user's salary structure
+    salary_structure = db.query(SalaryStructure).filter(SalaryStructure.user_id == current_user.id).first()
+    if salary_structure:
+        basic_salary = salary_structure.basic_salary
+        allowances = sum(salary_structure.allowances.values()) if isinstance(salary_structure.allowances, dict) else 0.0
+        deductions = sum(salary_structure.deductions.values()) if isinstance(salary_structure.deductions, dict) else 0.0
+    else:
+        # Fallback to hardcoded values
+        basic_salary = 5000.0
+        allowances = 1000.0
+        deductions = 500.0
     net_salary = basic_salary + allowances - deductions
     
     payslip = Payslip(
