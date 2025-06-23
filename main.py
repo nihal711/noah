@@ -120,7 +120,7 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health_check(db: Session = Depends(get_db)):
-    """cl
+    """
     Health check endpoint to verify API and database connectivity.
     """
     try:

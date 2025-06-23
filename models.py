@@ -87,7 +87,7 @@ class BankLetterRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     bank_name = Column(String, nullable=False)
     type = Column(String, nullable=False)
-    additional_details = Column(Text, nullable=True)
+    comment = Column(Text, nullable=True)
     status = Column(String, default="pending")  # pending, approved, rejected, completed
     approver_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -154,3 +154,5 @@ config.local.py
 # Temporary files
 *.tmp
 *.temp 
+
+nohup.out

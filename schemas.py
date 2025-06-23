@@ -42,6 +42,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+
 # Leave Request Schemas
 class LeaveRequestBase(BaseModel):
     leave_type: str
@@ -127,8 +128,7 @@ class BankLetterRequestResponse(BaseModel):
     id: int
     user_id: int
     bank_name: str
-    purpose: str
-    additional_details: Optional[str] = None
+    comment: Optional[str] = None
     status: str
     approver_comments: Optional[str] = None
     created_at: datetime

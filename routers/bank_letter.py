@@ -20,7 +20,7 @@ async def request_bank_letter(
         user_id=current_user.id,
         bank_name=bank_letter_request.bankName,
         type=bank_letter_request.type,
-        additional_details=bank_letter_request.comment
+        comment=bank_letter_request.comment
     )
     db.add(db_bank_letter_request)
     db.flush()  # Get the ID
