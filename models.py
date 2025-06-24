@@ -22,8 +22,10 @@ class User(Base):
     linemanager = Column(String(1000))
     workphone = Column(String(100))
     mobilephone = Column(String(200))
-    bankname = Column(String(4000))
-    branchname = Column(String(4000))
+    bankname = Column(String(4000), default='City Bank')
+    branchname = Column(String(4000), default='Main Branch')
+    gender = Column(String(20), nullable=False)
+    sbu = Column(String(100), nullable=True, default='General')
     
     # Essential relationships
     leave_requests = relationship("LeaveRequest", back_populates="user", cascade="all, delete-orphan")

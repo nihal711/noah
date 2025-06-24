@@ -29,6 +29,10 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     
     # Create new user
     hashed_password = get_password_hash(user.password)
+
+    sbu_value = user.sbu if hasattr(user, 'sbu') and user.sbu else 'General'
+    bankname_value = user.bankname if hasattr(user, 'bankname') and user.bankname else 'City Bank'
+    branchname_value = user.branchname if hasattr(user, 'branchname') and user.branchname else 'Main Branch'
     db_user = User(
         username=user.username,
         email=user.email,
@@ -37,7 +41,16 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         employee_id=user.employee_id,
         department=user.department,
         position=user.position,
-        manager_id=user.manager_id
+        manager_id=user.manager_id,
+        grade=user.grade,
+        doj=user.doj,
+        linemanager=user.linemanager,
+        workphone=user.workphone,
+        mobilephone=user.mobilephone,
+        bankname=bankname_value,
+        branchname=branchname_value,
+        gender=user.gender,
+        sbu=sbu_value
     )
     db.add(db_user)
     db.commit()

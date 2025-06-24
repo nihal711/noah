@@ -18,6 +18,8 @@ class UserBase(BaseModel):
     mobilephone: Optional[str] = None
     bankname: Optional[str] = None
     branchname: Optional[str] = None
+    gender: str
+    sbu: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
