@@ -26,23 +26,24 @@ class User(Base):
     branchname = Column(String(4000))
     
     # Essential relationships
-    leave_requests = relationship("LeaveRequest", back_populates="user")
-    bank_letter_requests = relationship("BankLetterRequest", back_populates="user")
-    visa_letter_requests = relationship("VisaLetterRequest", back_populates="user")
-    payslips = relationship("Payslip", back_populates="user", foreign_keys="Payslip.user_id")
-    salary_structure = relationship("SalaryStructure", back_populates="user", foreign_keys="SalaryStructure.user_id", uselist=False)
-    benefit_enrollments = relationship("BenefitEnrollment", back_populates="user", foreign_keys="BenefitEnrollment.user_id")
+    leave_requests = relationship("LeaveRequest", back_populates="user", cascade="all, delete-orphan")
+    bank_letter_requests = relationship("BankLetterRequest", back_populates="user", cascade="all, delete-orphan")
+    visa_letter_requests = relationship("VisaLetterRequest", back_populates="user", cascade="all, delete-orphan")
+    payslips = relationship("Payslip", back_populates="user", foreign_keys="Payslip.user_id", cascade="all, delete-orphan")
+    salary_structure = relationship("SalaryStructure", back_populates="user", foreign_keys="SalaryStructure.user_id", uselist=False, cascade="all, delete-orphan")
+    benefit_enrollments = relationship("BenefitEnrollment", back_populates="user", foreign_keys="BenefitEnrollment.user_id", cascade="all, delete-orphan")
     
-    performance_goals = relationship("PerformanceGoal", back_populates="user", foreign_keys="PerformanceGoal.user_id")
-    performance_reviews = relationship("PerformanceReview", back_populates="user", foreign_keys="PerformanceReview.user_id")
-    overtime_requests = relationship("OvertimeRequest", back_populates="user")
+    performance_goals = relationship("PerformanceGoal", back_populates="user", foreign_keys="PerformanceGoal.user_id", cascade="all, delete-orphan")
+    performance_reviews = relationship("PerformanceReview", back_populates="user", foreign_keys="PerformanceReview.user_id", cascade="all, delete-orphan")
+    overtime_requests = relationship("OvertimeRequest", back_populates="user", cascade="all, delete-orphan")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    leave_type = Column(String, nullable=False)  # annual, sick, personal, etc.
+    # Allowed values: 'Annual', 'Sick', 'Casual'
+    leave_type = Column(String, nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     days_requested = Column(Float, nullable=False)
@@ -60,6 +61,7 @@ class LeaveBalance(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Allowed values: 'Annual', 'Sick', 'Casual'
     leave_type = Column(String, nullable=False)
     total_days = Column(Float, nullable=False)
     used_days = Column(Float, default=0.0)

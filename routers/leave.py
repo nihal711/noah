@@ -12,6 +12,21 @@ from sqlalchemy.sql import func
 
 router = APIRouter(prefix="/leave", tags=["Leave Management"])
 
+# Allowed leave types and their default balances
+ALLOWED_LEAVE_TYPES = ["Annual", "Sick", "Casual"]
+DEFAULT_LEAVE_BALANCES = {
+    "Annual": 25.0,
+    "Sick": 10.0,
+    "Casual": 5.0
+}
+
+def validate_leave_type(leave_type: str):
+    if leave_type not in ALLOWED_LEAVE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid leave type '{leave_type}'. Allowed types: {', '.join(ALLOWED_LEAVE_TYPES)}"
+        )
+
 def check_leave_balance(db: Session, user_id: int, leave_type: str, days_requested: float) -> None:
     """
     Check if user has sufficient leave balance.
@@ -63,15 +78,14 @@ def update_leave_balance(db: Session, user_id: int, leave_type: str, days_reques
         )
 
 # Leave Request Endpoints
-@router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request")
+@router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request. Allowed leave types: Annual, Sick, Casual.")
 async def apply_leave(
     leave_request: LeaveRequestCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
-    # Check if user has sufficient balance
+    validate_leave_type(leave_request.leave_type)
     check_leave_balance(db, current_user.id, leave_request.leave_type, leave_request.days_requested)
-    
     db_leave_request = LeaveRequest(
         user_id=current_user.id,
         leave_type=leave_request.leave_type,

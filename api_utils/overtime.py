@@ -42,8 +42,9 @@ def calculate_overtime_entitlement(user, date, hours, grade, year_total_hours):
         else:
             grade_rule_msg = "Max 4 OT hours per day counted."
     else:
-        entitled_hours = 0
-        grade_rule_msg = "Unknown grade. No entitlement."
+        # treat as grade 1 employee if grade missing
+        entitled_hours = hours * multiplier
+        grade_rule_msg = "All OT hours are counted."
     
     # Calculate total hours for year (including this request)
     total_hours = year_total_hours + entitled_hours

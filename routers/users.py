@@ -2,9 +2,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User
+from models import User, LeaveBalance
 from schemas import UserCreate, UserResponse, MessageResponse
 from auth import get_password_hash, get_current_active_user, get_current_user
+from datetime import datetime
+from routers.leave import DEFAULT_LEAVE_BALANCES
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -40,6 +42,21 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+
+    current_year = datetime.now().year
+    for leave_type, total_days in DEFAULT_LEAVE_BALANCES.items():
+        leave_balance = LeaveBalance(
+            user_id=db_user.id,
+            leave_type=leave_type,
+            total_days=total_days,
+            used_days=0.0,
+            remaining_days=total_days,
+            year=current_year
+        )
+        db.add(leave_balance)
+    db.commit()
+
     return db_user
 
 @router.get("/", response_model=List[UserResponse], summary="Get All Users", description="Retrieve all users (admin function)")
