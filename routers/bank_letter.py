@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from database import get_db
@@ -132,7 +132,7 @@ def is_subordinate(db: Session, manager: User, user_id: int) -> bool:
 @router.put("/{request_id}/approve", response_model=BankLetterRequestResponse)
 async def approve_bank_letter_request(
     request_id: int,
-    approver_comments: str = Body(..., embed=True),
+    approver_comments: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -169,7 +169,7 @@ async def approve_bank_letter_request(
 @router.put("/{request_id}/reject", response_model=BankLetterRequestResponse)
 async def reject_bank_letter_request(
     request_id: int,
-    approver_comments: str = Body(..., embed=True),
+    approver_comments: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

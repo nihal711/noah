@@ -38,6 +38,7 @@ class User(Base):
     performance_goals = relationship("PerformanceGoal", back_populates="user", foreign_keys="PerformanceGoal.user_id", cascade="all, delete-orphan")
     performance_reviews = relationship("PerformanceReview", back_populates="user", foreign_keys="PerformanceReview.user_id", cascade="all, delete-orphan")
     overtime_requests = relationship("OvertimeRequest", back_populates="user", cascade="all, delete-orphan")
+    leave_balances = relationship("LeaveBalance", cascade="all, delete-orphan", back_populates="user")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -46,8 +47,8 @@ class LeaveRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     # Allowed values: 'Annual', 'Sick', 'Casual'
     leave_type = Column(String, nullable=False)
-    start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
     days_requested = Column(Float, nullable=False)
     reason = Column(Text, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected
@@ -62,7 +63,7 @@ class LeaveBalance(Base):
     __tablename__ = "leave_balances"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     # Allowed values: 'Annual', 'Sick', 'Casual'
     leave_type = Column(String, nullable=False)
     total_days = Column(Float, nullable=False)
@@ -71,7 +72,7 @@ class LeaveBalance(Base):
     year = Column(Integer, nullable=False)
     
     # Relationships
-    user = relationship("User")
+    user = relationship("User", back_populates="leave_balances")
 
 class Attachment(Base):
     __tablename__ = "attachments"

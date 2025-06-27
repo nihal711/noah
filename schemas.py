@@ -48,8 +48,8 @@ class LoginRequest(BaseModel):
 # Leave Request Schemas
 class LeaveRequestBase(BaseModel):
     leave_type: str
-    start_date: datetime
-    end_date: datetime
+    start_date: date
+    end_date: date
     days_requested: float
     reason: str
 

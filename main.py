@@ -78,6 +78,7 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
+    root_path="/erp" 
 )
 
 # Add CORS middleware
