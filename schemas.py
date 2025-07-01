@@ -492,6 +492,7 @@ class EnrollmentResponse(EnrollmentBase):
     enrolled_at: datetime
     status: str
     progress: int
+    course: Optional[CourseResponse] = None
 
     class Config:
         from_attributes = True
@@ -507,6 +508,7 @@ class CompletionResponse(CompletionBase):
     user_id: int
     completed_at: datetime
     certificate_url: Optional[str]
+    course: Optional[CourseResponse] = None
 
     class Config:
         from_attributes = True

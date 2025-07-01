@@ -103,6 +103,34 @@ def get_all_courses(
     """
     return db.query(Course).all()
 
+@router.get("/courses/ongoing", response_model=DepartmentCoursesResponse)
+def get_ongoing_courses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get all ongoing courses available to the current user (filtered by department/category),
+    where the user is not already enrolled and has not completed.
+    """
+    from datetime import date
+    today = date.today()
+    allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department.value, ["HR"])
+    # Get all ongoing courses in allowed categories
+    ongoing_courses = db.query(Course).filter(
+        Course.is_active == True,
+        Course.start_date <= today,
+        Course.end_date >= today,
+        Course.category.in_(allowed_categories)
+    ).all()
+    # Get user's enrollments and completions
+    enrolled_course_ids = {e.course_id for e in db.query(Enrollment).filter(Enrollment.user_id == current_user.id).all()}
+    completed_course_ids = {c.course_id for c in db.query(Completion).filter(Completion.user_id == current_user.id).all()}
+    # Filter out courses where user is already enrolled or completed
+    available_courses = [c for c in ongoing_courses if c.course_id not in enrolled_course_ids and c.course_id not in completed_course_ids]
+    course_responses = [CourseResponse.from_orm(course) for course in available_courses]
+    for course_response in course_responses:
+        course_response.department_categories = allowed_categories
+    return DepartmentCoursesResponse(categories=allowed_categories, courses=course_responses)
 
 @router.get("/courses/{course_id}", response_model=CourseResponse)
 def get_course(
@@ -119,22 +147,6 @@ def get_course(
         raise HTTPException(status_code=404, detail="Course not found")
     return course
 
-
-
-# @router.get("/courses/available", response_model=DepartmentCoursesResponse)
-# def get_available_courses(
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_active_user)
-# ):
-#     """
-#     Get all courses available to the current user (filtered by department/category).
-#     """
-#     allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department, ["HR"])
-#     courses = db.query(Course).filter(Course.category.in_(allowed_categories)).all()
-#     course_responses = [CourseResponse.from_orm(course) for course in courses]
-#     for course_response in course_responses:
-#         course_response.department_categories = allowed_categories
-#     return DepartmentCoursesResponse(categories=allowed_categories, courses=course_responses)
 
 # Enrollment endpoints
 @router.post("/enrollments", response_model=EnrollmentResponse)
@@ -187,18 +199,29 @@ def get_enrollments(
     current_user = Depends(get_current_user)
 ):
     """
-    Get user's enrollments with optional filtering.
+    Get user's enrollments with optional filtering, including course details.
     """
     query = db.query(Enrollment).filter(Enrollment.user_id == current_user.id)
-    
     if year:
         query = query.filter(extract('year', Enrollment.enrolled_at) == year)
     if status:
         query = query.filter(Enrollment.status == status)
     if course_id:
         query = query.filter(Enrollment.course_id == course_id)
-    
-    return query.offset(skip).limit(limit).all()
+    enrollments = query.offset(skip).limit(limit).all()
+    # Attach course details
+    result = []
+    for e in enrollments:
+        course = db.query(Course).filter(Course.course_id == e.course_id).first()
+        e_dict = e.__dict__.copy()
+        if course:
+            e_dict['course'] = CourseResponse.from_orm(course)
+        else:
+            e_dict['course'] = None
+        # Remove SQLAlchemy state if present
+        e_dict.pop('_sa_instance_state', None)
+        result.append(EnrollmentResponse(**e_dict))
+    return result
 
 # Completion endpoints
 @router.post("/completions", response_model=CompletionResponse)
@@ -258,13 +281,23 @@ def get_completions(
     current_user = Depends(get_current_user)
 ):
     """
-    Get user's completed courses with optional filtering.
+    Get user's completed courses with optional filtering, including course details.
     """
     query = db.query(Completion).filter(Completion.user_id == current_user.id)
-    
     if year:
         query = query.filter(extract('year', Completion.completed_at) == year)
     if course_id:
         query = query.filter(Completion.course_id == course_id)
-    
-    return query.offset(skip).limit(limit).all() 
+    completions = query.offset(skip).limit(limit).all()
+    # Attach course details
+    result = []
+    for c in completions:
+        course = db.query(Course).filter(Course.course_id == c.course_id).first()
+        c_dict = c.__dict__.copy()
+        if course:
+            c_dict['course'] = CourseResponse.from_orm(course)
+        else:
+            c_dict['course'] = None
+        c_dict.pop('_sa_instance_state', None)
+        result.append(CompletionResponse(**c_dict))
+    return result 
