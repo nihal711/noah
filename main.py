@@ -78,8 +78,10 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
-    root_path="/erp" 
-)
+    root_path="/erp",
+         # ReDoc endpoint (optional)
+) 
+
 
 # Add CORS middleware
 app.add_middleware(

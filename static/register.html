@@ -39,7 +39,19 @@
       <label>Employee ID*</label>
       <input type="text" name="employee_id" required>
       <label>Department*</label>
-      <input type="text" name="department" required>
+      <select name="department" required>
+        <option value="Engineering">Engineering</option>
+        <option value="Human Resources">Human Resources</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Finance">Finance</option>
+      </select>
+      <label>Allowed Categories</label>
+      <select name="categories" multiple size="4">
+        <option value="TECH">TECH</option>
+        <option value="HR">HR</option>
+        <option value="MARKETING">MARKETING</option>
+        <option value="FINANCE">FINANCE</option>
+      </select>
       <label>Position*</label>
       <input type="text" name="position" required>
       <label>Password*</label>
@@ -143,6 +155,12 @@
       ].forEach(f => {
         if (form[f] && form[f].value) data[f] = form[f].value;
       });
+      // Categories (multi-select)
+      const catSel = form.categories;
+      if (catSel) {
+        const selected = Array.from(catSel.selectedOptions).map(opt => opt.value);
+        if (selected.length) data.categories = selected;
+      }
       // Convert date to ISO if present
       if (data.doj) data.doj = new Date(data.doj).toISOString();
       const res = await fetch('/users/', {

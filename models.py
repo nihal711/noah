@@ -2,6 +2,15 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Foreign
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+from enum import Enum as PyEnum
+from sqlalchemy import Enum as SqlEnum
+from sqlalchemy.dialects.postgresql import ARRAY
+
+class DepartmentEnum(PyEnum):
+    ENGINEERING = "ENGINEERING"
+    HUMAN_RESOURCES = "HUMAN_RESOURCES"
+    MARKETING = "MARKETING"
+    FINANCE = "FINANCE"
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +22,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     employee_id = Column(String, unique=True, nullable=False)
-    department = Column(String, nullable=False)
+    department = Column(SqlEnum(DepartmentEnum), nullable=False)
     position = Column(String, nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -27,6 +36,7 @@ class User(Base):
     gender = Column(String(20), nullable=False)
     sbu = Column(String(100), nullable=True, default='General')
     religion = Column(String(100), nullable=False, default='Not Specified')
+
     
     # Essential relationships
     leave_requests = relationship("LeaveRequest", back_populates="user", cascade="all, delete-orphan")
@@ -233,22 +243,37 @@ class PerformanceReview(Base):
     user = relationship("User", foreign_keys=[user_id], back_populates="performance_reviews")
     goal = relationship("PerformanceGoal", back_populates="reviews")
 
+class CourseCategory(PyEnum):
+    TECH = "TECH"
+    HR = "HR"
+    MARKETING = "MARKETING"
+    FINANCE = "FINANCE"
+
 class Course(Base):
     __tablename__ = "courses"
     
     course_id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
-    category = Column(String, nullable=False)
+    category = Column(SqlEnum(CourseCategory), nullable=False)
     instructor = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
     duration = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_active = Column(Boolean, default=True)
 
-    # Relationships
-    enrollments = relationship("Enrollment", back_populates="course")
-    completions = relationship("Completion", back_populates="course")
+
+    enrollments = relationship("Enrollment", back_populates="course",cascade="all, delete-orphan")
+    completions = relationship("Completion", back_populates="course",cascade="all, delete-orphan")
+
+    @property
+    def duration_str(self):
+        if self.start_date and self.end_date:
+            days = (self.end_date - self.start_date).days
+            return f"{days} days"
+        return None
 
 class Enrollment(Base):
     __tablename__ = "enrollments"
@@ -276,6 +301,7 @@ class Completion(Base):
     # Relationships
     user = relationship("User")
     course = relationship("Course", back_populates="completions") 
+
 
 class OvertimeRequest(Base):
     __tablename__ = "overtime_requests"

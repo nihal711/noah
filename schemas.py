@@ -1,14 +1,24 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date
 from typing import Optional, List
+from models import CourseCategory
+from enum import Enum as PyEnum
 
-# User Schemas
+
+
+
+class DepartmentEnum(PyEnum):
+    ENGINEERING = "Engineering"
+    HR = "Human Resources"
+    MARKETING = "Marketing"
+    FINANCE = "Finance"
+
 class UserBase(BaseModel):
     username: str
     email: EmailStr
     full_name: str
     employee_id: str
-    department: str
+    department: DepartmentEnum
     position: str
     manager_id: Optional[int] = None
     grade: Optional[str] = None
@@ -21,6 +31,7 @@ class UserBase(BaseModel):
     gender: str
     sbu: Optional[str] = None
     religion: str = "Not Specified"
+    categories: Optional[List[str]] = None
 
 class UserCreate(UserBase):
     password: str
@@ -438,12 +449,13 @@ class PerformanceGoal(PerformanceGoalBase):
     class Config:
         from_attributes = True
 
-# LMS Schemas
 class CourseBase(BaseModel):
     title: str
     description: str
-    category: str
+    category: CourseCategory
     instructor: str
+    start_date: date
+    end_date: date
     duration: int
 
 class CourseCreate(CourseBase):
@@ -454,9 +466,19 @@ class CourseResponse(CourseBase):
     created_at: datetime
     updated_at: Optional[datetime]
     is_active: bool
+    duration_str: Optional[str] = None
+    department_categories: Optional[List[str]] = None
 
     class Config:
         from_attributes = True
+        use_enum_values = True
+
+class DepartmentCoursesResponse(BaseModel):
+    categories: List[str]
+    courses: List[CourseResponse]
+
+    class Config:
+        use_enum_values = True
 
 class EnrollmentBase(BaseModel):
     course_id: int
@@ -491,7 +513,7 @@ class CompletionResponse(CompletionBase):
 
 # Filter Schemas
 class CourseFilter(BaseModel):
-    category: Optional[str] = None
+    category: Optional[CourseCategory] = None
     instructor: Optional[str] = None
     is_active: Optional[bool] = None
 
