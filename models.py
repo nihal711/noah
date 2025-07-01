@@ -26,6 +26,7 @@ class User(Base):
     branchname = Column(String(4000), default='Main Branch')
     gender = Column(String(20), nullable=False)
     sbu = Column(String(100), nullable=True, default='General')
+    religion = Column(String(100), nullable=False, default='Not Specified')
     
     # Essential relationships
     leave_requests = relationship("LeaveRequest", back_populates="user", cascade="all, delete-orphan")

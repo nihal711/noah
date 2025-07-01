@@ -9,23 +9,44 @@ from utils import verify_manager_permission, is_manager
 from datetime import datetime, timedelta
 from sqlalchemy import extract
 from sqlalchemy.sql import func
+from api_utils.leave import is_leave_type_eligible
 
 router = APIRouter(prefix="/leave", tags=["Leave Management"])
 
 # Allowed leave types and their default balances
-ALLOWED_LEAVE_TYPES = ["Annual", "Sick", "Casual"]
+ALLOWED_LEAVE_TYPES = ["Annual", "Sick", "Casual", "Maternity", "Paternity", "Hajj"]
 DEFAULT_LEAVE_BALANCES = {
     "Annual": 25.0,
     "Sick": 10.0,
-    "Casual": 5.0
+    "Casual": 5.0,
+    "Maternity": 90.0,
+    "Paternity": 10.0,
+    "Hajj": 30.0
 }
 
-def validate_leave_type(leave_type: str):
+def validate_leave_type(leave_type: str, user=None):
     if leave_type not in ALLOWED_LEAVE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid leave type '{leave_type}'. Allowed types: {', '.join(ALLOWED_LEAVE_TYPES)}"
         )
+    # Eligibility checks
+    if user:
+        if leave_type == "Maternity" and user.gender.lower() != "female":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maternity leave is only available for female employees."
+            )
+        if leave_type == "Paternity" and user.gender.lower() != "male":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Paternity leave is only available for male employees."
+            )
+        if leave_type == "Hajj" and user.religion.strip().lower() != "muslim":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Hajj leave is only available for Muslim employees."
+            )
 
 def check_leave_balance(db: Session, user_id: int, leave_type: str, days_requested: float) -> None:
     """
@@ -78,13 +99,13 @@ def update_leave_balance(db: Session, user_id: int, leave_type: str, days_reques
         )
 
 # Leave Request Endpoints
-@router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request. Allowed leave types: Annual, Sick, Casual.")
+@router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request. Allowed leave types: Annual, Sick, Casual, Maternity, Paternity, Hajj.")
 async def apply_leave(
     leave_request: LeaveRequestCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
-    validate_leave_type(leave_request.leave_type)
+    validate_leave_type(leave_request.leave_type, user=current_user)
     check_leave_balance(db, current_user.id, leave_request.leave_type, leave_request.days_requested)
     db_leave_request = LeaveRequest(
         user_id=current_user.id,
@@ -336,3 +357,11 @@ async def get_overtime_leave_entitlement(
         "year": current_year,
         "entitled_leave_days": total_ot_leave
     }
+
+@router.get("/get_eligible_leaves", response_model=List[str], summary="Get Eligible Leave Types", description="Get a list of leave types the current user is eligible for.")
+async def get_eligible_leave_types(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    eligible_types = [lt for lt in ALLOWED_LEAVE_TYPES if is_leave_type_eligible(current_user, lt)]
+    return eligible_types

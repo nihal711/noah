@@ -50,6 +50,19 @@
         <option value="Male">Male</option>
         <option value="Female">Female</option>
       </select>
+      <label>Religion*</label>
+      <select name="religion" required>
+        <option value="">Select religion</option>
+        <option value="Muslim">Muslim</option>
+        <option value="Hindu">Hindu</option>
+        <option value="Christian">Christian</option>
+        <option value="Buddhist">Buddhist</option>
+        <option value="Sikh">Sikh</option>
+        <option value="Jain">Jain</option>
+        <option value="Jewish">Jewish</option>
+        <option value="Other">Other</option>
+        <option value="Not Specified">Prefer not to say</option>
+      </select>
       <label>SBU</label>
       <select name="sbu">
         <option value="General">General</option>
@@ -123,6 +136,7 @@
       data.position = form.position.value;
       data.password = form.password.value;
       data.gender = form.gender.value;
+      data.religion = form.religion.value;
       // Optional fields
       [
         'manager_id','grade','doj','linemanager','mobilephone','bankname','branchname','sbu'

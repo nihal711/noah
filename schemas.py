@@ -20,6 +20,7 @@ class UserBase(BaseModel):
     branchname: Optional[str] = None
     gender: str
     sbu: Optional[str] = None
+    religion: str = "Not Specified"
 
 class UserCreate(UserBase):
     password: str

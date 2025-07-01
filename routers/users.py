@@ -7,6 +7,7 @@ from schemas import UserCreate, UserResponse, MessageResponse
 from auth import get_password_hash, get_current_active_user, get_current_user
 from datetime import datetime
 from routers.leave import DEFAULT_LEAVE_BALANCES
+from api_utils.leave import is_leave_type_eligible
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -59,15 +60,16 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
     current_year = datetime.now().year
     for leave_type, total_days in DEFAULT_LEAVE_BALANCES.items():
-        leave_balance = LeaveBalance(
-            user_id=db_user.id,
-            leave_type=leave_type,
-            total_days=total_days,
-            used_days=0.0,
-            remaining_days=total_days,
-            year=current_year
-        )
-        db.add(leave_balance)
+        if is_leave_type_eligible(db_user, leave_type):
+            leave_balance = LeaveBalance(
+                user_id=db_user.id,
+                leave_type=leave_type,
+                total_days=total_days,
+                used_days=0.0,
+                remaining_days=total_days,
+                year=current_year
+            )
+            db.add(leave_balance)
     db.commit()
 
     return db_user
