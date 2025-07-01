@@ -72,21 +72,6 @@ def get_courses(
         course_response.department_categories = allowed_categories
     return DepartmentCoursesResponse(categories=allowed_categories, courses=course_responses)
 
-@router.get("/courses/{course_id}", response_model=CourseResponse)
-def get_course(
-    *,
-    db: Session = Depends(get_db),
-    course_id: int,
-    current_user = Depends(get_current_user)
-):
-    """
-    Get a specific course by ID.
-    """
-    course = db.query(Course).filter(Course.course_id == course_id).first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
-    return course
-
 @router.get("/courses/upcoming", response_model=DepartmentCoursesResponse)
 def get_upcoming_courses(
     *,
@@ -97,7 +82,7 @@ def get_upcoming_courses(
     Get all upcoming (future) active courses, sorted by start_date ascending, filtered by department categories.
     """
     today = datetime.utcnow().date()
-    allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department, ["HR"])
+    allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department.value, ["HR"])
     courses = db.query(Course).filter(
         Course.is_active == True,
         Course.start_date > today,
@@ -118,20 +103,38 @@ def get_all_courses(
     """
     return db.query(Course).all()
 
-@router.get("/courses/available", response_model=DepartmentCoursesResponse)
-def get_available_courses(
+
+@router.get("/courses/{course_id}", response_model=CourseResponse)
+def get_course(
+    *,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    course_id: int,
+    current_user = Depends(get_current_user)
 ):
     """
-    Get all courses available to the current user (filtered by department/category).
+    Get a specific course by ID.
     """
-    allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department, ["HR"])
-    courses = db.query(Course).filter(Course.category.in_(allowed_categories)).all()
-    course_responses = [CourseResponse.from_orm(course) for course in courses]
-    for course_response in course_responses:
-        course_response.department_categories = allowed_categories
-    return DepartmentCoursesResponse(categories=allowed_categories, courses=course_responses)
+    course = db.query(Course).filter(Course.course_id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    return course
+
+
+
+# @router.get("/courses/available", response_model=DepartmentCoursesResponse)
+# def get_available_courses(
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user)
+# ):
+#     """
+#     Get all courses available to the current user (filtered by department/category).
+#     """
+#     allowed_categories = DEPT_CATEGORY_MAP.get(current_user.department, ["HR"])
+#     courses = db.query(Course).filter(Course.category.in_(allowed_categories)).all()
+#     course_responses = [CourseResponse.from_orm(course) for course in courses]
+#     for course_response in course_responses:
+#         course_response.department_categories = allowed_categories
+#     return DepartmentCoursesResponse(categories=allowed_categories, courses=course_responses)
 
 # Enrollment endpoints
 @router.post("/enrollments", response_model=EnrollmentResponse)
