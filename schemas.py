@@ -207,6 +207,7 @@ class RequestSummary(BaseModel):
     user_id: int
     user_full_name: str
     user_email: str
+    details: Optional[str] = None
     
     class Config:
         from_attributes = True
