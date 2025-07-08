@@ -98,6 +98,15 @@ def update_leave_balance(db: Session, user_id: int, leave_type: str, days_reques
             detail=f"Cannot approve leave request. It would result in negative balance for {leave_type} leave"
         )
 
+def has_overlapping_leave(db: Session, user_id: int, start_date, end_date) -> bool:
+    overlapping = db.query(LeaveRequest).filter(
+        LeaveRequest.user_id == user_id,
+        LeaveRequest.status.in_(["pending", "approved"]),
+        LeaveRequest.start_date <= end_date,
+        LeaveRequest.end_date >= start_date
+    ).first()
+    return overlapping is not None
+
 # Leave Request Endpoints
 @router.post("/requests", response_model=LeaveRequestResponse, summary="Apply for Leave", description="Submit a new leave request. Allowed leave types: Annual, Sick, Casual, Maternity, Paternity, Hajj.")
 async def apply_leave(
@@ -107,6 +116,12 @@ async def apply_leave(
 ):
     validate_leave_type(leave_request.leave_type, user=current_user)
     check_leave_balance(db, current_user.id, leave_request.leave_type, leave_request.days_requested)
+    # Check for overlapping leave requests
+    if has_overlapping_leave(db, current_user.id, leave_request.start_date, leave_request.end_date):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You already have a leave request (pending or approved) that overlaps with the requested dates."
+        )
     db_leave_request = LeaveRequest(
         user_id=current_user.id,
         leave_type=leave_request.leave_type,
