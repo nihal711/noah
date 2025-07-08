@@ -183,6 +183,7 @@ class Benefit(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    grades = Column(ARRAY(String), nullable=True)  # List of eligible grades (e.g., ["1", "2", "3"]) 
 
 class BenefitEnrollment(Base):
     __tablename__ = "benefit_enrollments"

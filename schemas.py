@@ -270,6 +270,7 @@ class BenefitBase(BaseModel):
     benefit_type: str
     max_amount: float
     is_active: bool = True
+    grades: Optional[List[str]] = None
 
 class BenefitCreate(BenefitBase):
     pass

@@ -129,6 +129,22 @@ async def list_benefits(
     benefits = db.query(Benefit).filter(Benefit.is_active == True).all()
     return benefits
 
+
+@router.get("/benefits/gradewise")
+async def list_benefits_gradewise(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """List all benefits grouped by grade."""
+    benefits = db.query(Benefit).filter(Benefit.is_active == True).all()
+    gradewise = {}
+    for benefit in benefits:
+        if benefit.grades:
+            for grade in benefit.grades:
+                gradewise.setdefault(grade, []).append(BenefitResponse.model_validate(benefit))
+    gradewise = dict(sorted(gradewise.items(), key=lambda x: x[0]))
+    return gradewise
+
 @router.post("/benefits/enroll", response_model=BenefitEnrollmentResponse)
 async def enroll_in_benefit(
     enrollment: BenefitEnrollmentCreate,
@@ -177,19 +193,18 @@ async def get_my_active_benefits(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all active benefits that the current user is enrolled in"""
+    """Get all active benefits that the current user is enrolled in and eligible for their grade"""
+    user_grade = str(current_user.grade)
     active_enrollments = db.query(BenefitEnrollment).filter(
         BenefitEnrollment.user_id == current_user.id,
         BenefitEnrollment.enrollment_status == "approved"
     ).all()
-    
-    # Get the corresponding benefits
     benefit_ids = [enrollment.benefit_id for enrollment in active_enrollments]
     benefits = db.query(Benefit).filter(
         Benefit.benefit_id.in_(benefit_ids),
-        Benefit.is_active == True
+        Benefit.is_active == True,
+        Benefit.grades.any(user_grade)
     ).all()
-    
     return benefits
 
 @router.get("/benefits/user-active-benefits/{user_id}", response_model=List[BenefitResponse])
@@ -201,20 +216,21 @@ async def get_user_active_benefits(
     """Get active benefits for a specific user (manager only, can only view subordinates)"""
     # Verify manager permissions
     verify_manager_permission(db, current_user, user_id)
-    
-    # Get approved enrollments for the specific user
+    # Get the target user and their grade
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_grade = str(target_user.grade)
     active_enrollments = db.query(BenefitEnrollment).filter(
         BenefitEnrollment.user_id == user_id,
         BenefitEnrollment.enrollment_status == "approved"
     ).all()
-    
-    # Get the corresponding benefits
     benefit_ids = [enrollment.benefit_id for enrollment in active_enrollments]
     benefits = db.query(Benefit).filter(
         Benefit.benefit_id.in_(benefit_ids),
-        Benefit.is_active == True
+        Benefit.is_active == True,
+        Benefit.grades.any(user_grade)
     ).all()
-    
     return benefits
 
 @router.put("/benefits/enrollments/{enrollment_id}/approve", response_model=BenefitEnrollmentResponse)
