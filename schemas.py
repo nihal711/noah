@@ -8,10 +8,10 @@ from enum import Enum as PyEnum
 
 
 class DepartmentEnum(PyEnum):
-    ENGINEERING = "Engineering"
-    HR = "Human Resources"
-    MARKETING = "Marketing"
-    FINANCE = "Finance"
+    ENGINEERING = "ENGINEERING"
+    HUMAN_RESOURCES = "HUMAN_RESOURCES"
+    MARKETING = "MARKETING"
+    FINANCE = "FINANCE"
 
 class UserBase(BaseModel):
     username: str
@@ -33,6 +33,9 @@ class UserBase(BaseModel):
     religion: str = "Not Specified"
     categories: Optional[List[str]] = None
 
+    class Config:
+        use_enum_values = True
+
 class UserCreate(UserBase):
     password: str
 
@@ -43,6 +46,7 @@ class UserResponse(UserBase):
     
     class Config:
         from_attributes = True
+        use_enum_values = True
 
 # Authentication Schemas
 class Token(BaseModel):
