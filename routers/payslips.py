@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 from datetime import datetime
 import calendar
+from pydantic import BaseModel
 
 from database import get_db
 from models import Payslip, User, SalaryStructure
@@ -14,6 +15,10 @@ router = APIRouter(
     prefix="/payslips",
     tags=["Payslips Management"]
 )
+
+class PayslipGenerateRequest(BaseModel):
+    month: int
+    year: int
 
 @router.get("/getpayslipperiod")
 async def get_payslip_periods(
@@ -52,11 +57,12 @@ async def get_payslip_periods(
 
 @router.post("/generate")
 async def generate_payslip(
-    month: int = Query(..., ge=1, le=12),
-    year: int = Query(..., ge=2000),
+    payload: PayslipGenerateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    month = payload.month
+    year = payload.year
     # Check if payslip already exists for this month/year
     existing_payslip = db.query(Payslip).filter(
         Payslip.user_id == current_user.id,
@@ -116,6 +122,17 @@ async def get_payslips(
     payslips = query.order_by(Payslip.year.desc(), Payslip.month.desc()).all()
     
     return payslips
+
+@router.get("/pending", response_model=List[PayslipResponse], summary="Get My Pending Payslips", description="Retrieve all pending payslips for the current user.")
+async def get_my_pending_payslips(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    pending_payslips = db.query(Payslip).filter(
+        Payslip.user_id == current_user.id,
+        Payslip.status == "pending"
+    ).order_by(Payslip.year.desc(), Payslip.month.desc()).all()
+    return pending_payslips
 
 @router.get("/get_single")
 async def get_single_payslip(

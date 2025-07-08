@@ -102,6 +102,10 @@ async def get_subordinates(
             detail="You don't have any subordinates"
         )
         
+    # Patch: convert department enum to value for each subordinate
+    for s in subordinates:
+        if hasattr(s, "department") and hasattr(s.department, "value"):
+            s.department = s.department.value
     return subordinates
 
 @router.delete("/{user_id}", response_model=MessageResponse, summary="Delete User", description="Delete a user account")
