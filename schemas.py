@@ -31,7 +31,6 @@ class UserBase(BaseModel):
     gender: str
     sbu: Optional[str] = None
     religion: str = "Not Specified"
-    categories: Optional[List[str]] = None
 
     class Config:
         use_enum_values = True
@@ -43,6 +42,7 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
+    department: str  # Override to ensure string serialization
     
     class Config:
         from_attributes = True

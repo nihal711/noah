@@ -40,22 +40,16 @@
       <input type="text" name="employee_id" required>
       <label>Department*</label>
       <select name="department" required>
-        <option value="Engineering">Engineering</option>
-        <option value="Human Resources">Human Resources</option>
-        <option value="Marketing">Marketing</option>
-        <option value="Finance">Finance</option>
-      </select>
-      <label>Allowed Categories</label>
-      <select name="categories" multiple size="4">
-        <option value="TECH">TECH</option>
-        <option value="HR">HR</option>
-        <option value="MARKETING">MARKETING</option>
-        <option value="FINANCE">FINANCE</option>
+        <option value="ENGINEERING">Engineering</option>
+        <option value="HUMAN_RESOURCES">Human Resources</option>
+        <option value="MARKETING">Marketing</option>
+        <option value="FINANCE">Finance</option>
       </select>
       <label>Position*</label>
       <input type="text" name="position" required>
       <label>Password*</label>
-      <input type="password" name="password" required>
+      <input type="password" name="password" id="password" required style="width: 85%; display: inline-block;">
+      <button type="button" onclick="togglePassword()" style="width: 12%; background: none; border: 1px solid #ccc; cursor: pointer; margin-left: 8px; border-radius: 4px; padding: 8px;">👁️</button>
       <label>Gender*</label>
       <select name="gender" required>
         <option value="">Select gender</option>
@@ -120,6 +114,17 @@
         btn.textContent = 'Hide optional fields';
       }
     }
+    function togglePassword() {
+      const passwordField = document.getElementById('password');
+      const toggleBtn = event.target;
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleBtn.textContent = '🙈';
+      } else {
+        passwordField.type = 'password';
+        toggleBtn.textContent = '👁️';
+      }
+    }
     document.getElementById('registerForm').onsubmit = async function(e) {
       e.preventDefault();
       const form = e.target;
@@ -155,12 +160,6 @@
       ].forEach(f => {
         if (form[f] && form[f].value) data[f] = form[f].value;
       });
-      // Categories (multi-select)
-      const catSel = form.categories;
-      if (catSel) {
-        const selected = Array.from(catSel.selectedOptions).map(opt => opt.value);
-        if (selected.length) data.categories = selected;
-      }
       // Convert date to ISO if present
       if (data.doj) data.doj = new Date(data.doj).toISOString();
       const res = await fetch('/users/', {

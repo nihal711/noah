@@ -51,6 +51,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         bankname=bankname_value,
         branchname=branchname_value,
         gender=user.gender,
+        religion=user.religion,
         sbu=sbu_value
     )
     db.add(db_user)
